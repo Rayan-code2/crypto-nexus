@@ -11,6 +11,8 @@ export interface User {
   level: number;
   is_blocked: boolean;
   is_active: boolean;
+  direct_count: number;
+  is_qualified: boolean;
   role: UserRole;
   created_at: string;
 }
@@ -20,7 +22,15 @@ export interface Wallet {
   user_id: string;
   balance: number;
   total_earned: number;
+  roi_earned: number; // Legacy, keeping for compatibility
+  wallet_roi_earned: number;
+  pool_roi_earned: number;
+  direct_income: number;
+  level_income: number;
+  hold_balance: number; // For Autopool entry
   total_withdrawn: number;
+  last_roi_at?: string;
+  last_pool_roi_at?: string;
 }
 
 export type TransactionType = 'direct' | 'level' | 'pool' | 'roi' | 'task' | 'exchange';

@@ -1,5 +1,5 @@
 {
-  "name": "cryptonexus-mlm",
+  "name": "cryptospiral",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "appwrite": "^22.4.1",
+    "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "^3.7.0"

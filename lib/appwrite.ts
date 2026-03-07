@@ -25,6 +25,8 @@ export const APPWRITE_CONFIG = {
     tasks: import.meta.env.VITE_APPWRITE_TASKS_COLLECTION_ID,
     exchanger: import.meta.env.VITE_APPWRITE_EXCHANGER_COLLECTION_ID,
     submissions: import.meta.env.VITE_APPWRITE_SUBMISSIONS_COLLECTION_ID,
+    transactions: import.meta.env.VITE_APPWRITE_TRANSACTIONS_COLLECTION_ID,
+    pools: import.meta.env.VITE_APPWRITE_POOLS_COLLECTION_ID,
   }
 };
 

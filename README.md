@@ -1,5 +1,5 @@
 
-# CryptoNexus MLM Platform
+# CryptoSpiral MLM Platform
 
 ## Deployment Steps
 

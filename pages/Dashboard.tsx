@@ -1,14 +1,20 @@
 
 import React, { useState, useMemo } from 'react';
 import { User, Wallet, Transaction } from '../types';
+import { mockApi } from '../lib/mockApi';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, AreaChart, Area, LineChart, Line 
 } from 'recharts';
+import { 
+  ArrowDownCircle, ArrowUpCircle, RefreshCcw, UserPlus, 
+  Zap, Shield, Globe, Cpu 
+} from 'lucide-react';
 
 interface DashboardProps {
   user: User;
   wallet: Wallet;
+  pools?: any[];
   onNavigate?: (tab: string) => void;
   onExchangerNav?: (subTab: 'topup' | 'withdraw' | 'swap') => void;
 }
@@ -17,14 +23,68 @@ const sparkData = [
   { v: 40 }, { v: 35 }, { v: 55 }, { v: 45 }, { v: 70 }, { v: 65 }, { v: 85 }
 ];
 
-const Dashboard: React.FC<DashboardProps> = ({ user, wallet, onNavigate, onExchangerNav }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavigate, onExchangerNav }) => {
   const [copied, setCopied] = useState(false);
+  const [liveBalance, setLiveBalance] = useState(wallet.balance);
+  const [marqueeText, setMarqueeText] = useState('⚡ NODE ACTIVE: SYSTEM ONLINE | 💎 USDT/INR: ₹92.45 (+0.4%) | 🔥 NETWORK VOLUME: $4.2M | 🚀 NEW POOL 5 ENTRY FROM ID #8291');
   const isAdmin = user.role?.toLowerCase() === 'admin';
+  
+  const activePool = useMemo(() => 
+    pools.find(p => p.status === 'active') || pools[pools.length - 1], 
+    [pools]
+  );
   
   const referralLink = useMemo(() => 
     `${window.location.origin}/?ref=${user.id}`, 
     [user.id]
   );
+
+  // Fetch settings for marquee
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settings = await mockApi.db.getSettings();
+        if (settings && settings.marquee_text) {
+          setMarqueeText(settings.marquee_text);
+        }
+      } catch (e) {
+        console.error("Failed to fetch marquee settings", e);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Real-time Balance Growth Ticker (Dual ROI)
+  React.useEffect(() => {
+    const walletDailyRate = 0.002; // 0.20%
+    const poolDailyRate = 0.01; // 1% on $10
+    
+    const walletRatePerSec = walletDailyRate / 86400;
+    const poolRatePerSec = poolDailyRate / 86400;
+    
+    const interval = setInterval(() => {
+      const now = Date.now();
+      let totalAccrued = 0;
+      
+      // Wallet Accrual (Only if balance > 0)
+      if (wallet.balance > 0) {
+        const lastWalletROI = wallet.last_roi_at ? new Date(wallet.last_roi_at).getTime() : now;
+        const walletSecs = (now - lastWalletROI) / 1000;
+        totalAccrued += wallet.balance * walletRatePerSec * walletSecs;
+      }
+      
+      // Pool Accrual (Only if user is qualified - meaning they are in Pool 1)
+      if (user.is_qualified) {
+        const lastPoolROI = wallet.last_pool_roi_at ? new Date(wallet.last_pool_roi_at).getTime() : now;
+        const poolSecs = (now - lastPoolROI) / 1000;
+        totalAccrued += 10 * poolRatePerSec * poolSecs; // 1% of $10
+      }
+      
+      setLiveBalance(wallet.balance + totalAccrued);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [wallet.balance, wallet.last_roi_at, wallet.last_pool_roi_at, user.is_active]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
@@ -33,10 +93,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, onNavigate, onExcha
   };
 
   const quickActions = [
-    { icon: '📥', label: 'Topup', color: 'bg-primary/10 text-primary border-primary/20', action: () => onExchangerNav?.('topup') },
-    { icon: '📤', label: 'Withdraw', color: 'bg-secondary/10 text-secondary border-secondary/20', action: () => onExchangerNav?.('withdraw') },
-    { icon: '🔄', label: 'Swap', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', action: () => onExchangerNav?.('swap') },
-    { icon: '🔗', label: 'Invite', color: 'bg-green-500/10 text-green-500 border-green-500/20', action: handleCopy },
+    { icon: <ArrowDownCircle size={20} />, label: 'Topup', color: 'text-primary', glow: 'shadow-primary/20', action: () => onExchangerNav?.('topup') },
+    { icon: <ArrowUpCircle size={20} />, label: 'Withdraw', color: 'text-secondary', glow: 'shadow-secondary/20', action: () => onExchangerNav?.('withdraw') },
+    { icon: <RefreshCcw size={20} />, label: 'Swap', color: 'text-amber-500', glow: 'shadow-amber-500/20', action: () => onExchangerNav?.('swap') },
+    { icon: <UserPlus size={20} />, label: 'Invite', color: 'text-green-500', glow: 'shadow-green-500/20', action: handleCopy },
   ];
 
   return (
@@ -45,11 +105,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, onNavigate, onExcha
       {/* TICKER */}
       <div className="w-full overflow-hidden bg-primary/5 border-y border-white/5 py-2 -mx-6 px-6 mb-2 backdrop-blur-sm sticky top-[68px] z-30">
         <div className="flex whitespace-nowrap animate-marquee gap-12 text-[9px] font-black uppercase tracking-widest text-primary/80">
-          <span>⚡ NODE ACTIVE: {user.email.split('@')[0].toUpperCase()}</span>
-          <span>💎 USDT/INR: ₹92.45 (+0.4%)</span>
-          <span>🔥 NETWORK VOLUME: $4.2M</span>
-          <span>🚀 NEW POOL 5 ENTRY FROM ID #8291</span>
-          <span>⚡ NODE ACTIVE: {user.email.split('@')[0].toUpperCase()}</span>
+          <span>{marqueeText}</span>
+          <span>{marqueeText}</span>
         </div>
       </div>
 
@@ -89,7 +146,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, onNavigate, onExcha
             
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1">Elite Nexus Voyager</p>
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1">Elite Spiral Voyager</p>
                 <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Agent {user.email.split('@')[0]}</h2>
               </div>
               <div className="w-12 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-md opacity-80 flex items-center justify-center shadow-lg">
@@ -98,11 +155,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, onNavigate, onExcha
             </div>
 
             <div className="relative z-10 my-4">
-              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Main Vault Balance</p>
+              <div className="flex justify-between items-end mb-1">
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Live Vault Balance</p>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Growth Active</span>
+                </div>
+              </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black tracking-tighter text-white">${wallet?.balance?.toFixed(2) || '0.00'}</span>
+                <span className="text-4xl font-black tracking-tighter text-white">${liveBalance?.toFixed(6) || '0.000000'}</span>
                 <span className="text-primary font-black text-xs uppercase tracking-widest">USDT</span>
               </div>
+              <p className="text-[8px] text-slate-600 font-bold uppercase mt-1">Daily Yield: 0.20% (Auto-Compounding)</p>
             </div>
 
             <div className="flex justify-between items-end relative z-10">
@@ -120,83 +184,276 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, onNavigate, onExcha
             </div>
           </div>
 
-          {/* QUICK ACTIONS */}
-          <div className="grid grid-cols-4 gap-3 mt-4">
+          {/* QUICK ACTIONS - OPTIMIZED FOR MOBILE PERFORMANCE */}
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 mt-4">
              {quickActions.map((action, i) => (
                <button 
                 key={i} 
                 onClick={action.action}
-                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border transition-all active:scale-90 ${action.color}`}
+                className={`group relative flex flex-col items-center justify-center gap-1.5 p-3 sm:p-4 rounded-2xl bg-slate-900/60 border border-white/5 transition-all active:scale-95 hover:bg-slate-800/80 shadow-lg ${action.glow} will-change-transform`}
                >
-                 <span className="text-xl">{action.icon}</span>
-                 <span className="text-[10px] font-bold uppercase tracking-widest">{action.label}</span>
+                 {/* Simplified corner accents for performance */}
+                 <div className="absolute top-0 left-0 w-1.5 h-1.5 border-t border-l border-white/20 rounded-tl-lg group-hover:border-primary transition-colors"></div>
+                 
+                 <div className={`p-2 rounded-xl bg-white/5 group-hover:bg-white/10 transition-all duration-200 ${action.color}`}>
+                   {React.cloneElement(action.icon as React.ReactElement, { size: 18 })}
+                 </div>
+                 <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-slate-400 group-hover:text-white transition-colors truncate w-full px-1 text-center">
+                   {action.label}
+                 </span>
                </button>
              ))}
           </div>
+
+          {/* MAIN STATS GRID - OPTIMIZED */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            {[
+              { label: 'Wallet ROI', value: `$${(wallet.wallet_roi_earned || 0).toFixed(2)}`, trend: '0.20%', color: 'text-cyan-400', sparkColor: '#22d3ee' },
+              { label: 'Pool ROI', value: `$${(wallet.pool_roi_earned || 0).toFixed(2)}`, trend: '1.00%', color: 'text-amber-400', sparkColor: '#fbbf24' },
+              { label: 'Direct Income', value: `$${(wallet.direct_income || 0).toFixed(2)}`, trend: 'Active', color: 'text-secondary', sparkColor: '#a855f7' },
+              { label: 'Level Income', value: `$${(wallet.level_income || 0).toFixed(2)}`, trend: 'Network', color: 'text-green-400', sparkColor: '#10b981' },
+            ].map((stat, i) => (
+              <div 
+                key={i} 
+                onClick={() => onNavigate?.('income')}
+                className="bg-slate-900/60 p-4 rounded-3xl border border-white/5 relative overflow-hidden group hover:bg-slate-800/80 transition-all cursor-pointer will-change-transform"
+              >
+                <h3 className="text-slate-500 text-[8px] font-black uppercase tracking-[0.2em] mb-1">{stat.label}</h3>
+                <p className={`text-lg font-black tracking-tighter ${stat.color}`}>{stat.value}</p>
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
+              </div>
+            ))}
+          </div>
         </section>
 
-        {/* STATS */}
-        <div className="lg:col-span-5 glass rounded-[2.5rem] p-6 border-white/5 flex flex-col justify-between gap-6">
-          <div className="flex justify-between items-center">
-             <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Evolution Status</h3>
-             <span className="bg-secondary/20 text-secondary px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">Tier 4 Elite</span>
-          </div>
+          {/* EVOLUTION STATUS CARD - REDESIGNED */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <div className="relative group overflow-hidden rounded-[2.5rem] p-8 bg-slate-900/60 border border-white/5 backdrop-blur-md will-change-transform">
+              {/* Background Decorative Elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 blur-[60px] rounded-full group-hover:bg-secondary/20 transition-all duration-700"></div>
+              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/5 blur-[80px] rounded-full"></div>
+              
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h3 className="text-white text-xs font-black uppercase tracking-[0.4em] mb-1">Evolution Protocol</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                      <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest">System Sync: 98.4%</p>
+                    </div>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+                    <span className="text-[10px] font-black text-secondary italic">TIER 04</span>
+                    <div className="w-[1px] h-3 bg-white/10"></div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Elite</span>
+                  </div>
+                </div>
 
-          <div className="flex items-center gap-6">
-            <div className="relative w-24 h-24 flex-shrink-0">
-               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="48" cy="48" r="42" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-900" />
-                <circle cx="48" cy="48" r="42" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray="263.8" strokeDashoffset="66" className="text-secondary drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center font-black text-xl italic">P4</div>
-            </div>
-            <div className="flex-1 space-y-2">
-               <p className="text-lg font-black italic text-white uppercase leading-none">Nexus Voyager</p>
-               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Next Rank: <span className="text-secondary">Nexus Prime</span></p>
-               <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-secondary w-[75%]"></div>
-               </div>
-            </div>
-          </div>
-          
-          <div className="bg-darker/60 rounded-2xl p-4 border border-white/5">
-            <div className="flex justify-between items-center mb-2">
-               <div className="flex items-center gap-2">
-                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Referral Engine</span>
-                 <span className={`text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${user.is_active ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'}`}>
-                   {user.is_active ? 'ID Active' : 'ID Inactive'}
-                 </span>
-               </div>
-               {copied && <span className="text-[8px] text-primary font-black animate-bounce tracking-widest">COPIED!</span>}
-            </div>
-            <div className="flex gap-2">
-              <input readOnly value={referralLink} className="flex-1 bg-transparent border-none outline-none font-mono text-[10px] text-slate-400" />
-              <button onClick={handleCopy} className="text-primary text-xs hover:scale-110 active:scale-90 transition-all">📋</button>
-            </div>
-          </div>
-        </div>
-      </div>
+                <div className="flex flex-col sm:flex-row items-center gap-8">
+                  {/* Futuristic Progress Ring */}
+                  <div className="relative w-32 h-32 flex-shrink-0">
+                    <svg className="w-full h-full transform -rotate-90">
+                      {/* Outer Glow Ring */}
+                      <circle cx="64" cy="64" r="58" stroke="rgba(168,85,247,0.05)" strokeWidth="8" fill="transparent" />
+                      {/* Background Track */}
+                      <circle cx="64" cy="64" r="52" stroke="rgba(255,255,255,0.03)" strokeWidth="12" fill="transparent" />
+                      {/* Segmented Progress */}
+                      <circle 
+                        cx="64" cy="64" r="52" 
+                        stroke="url(#grad-evolution)" 
+                        strokeWidth="12" 
+                        fill="transparent" 
+                        strokeDasharray="326.7" 
+                        strokeDashoffset="81.6" 
+                        strokeLinecap="round"
+                        className="drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                      />
+                      <defs>
+                        <linearGradient id="grad-evolution" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#a855f7" />
+                          <stop offset="100%" stopColor="#06b6d4" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-black text-white italic tracking-tighter leading-none">75<span className="text-xs text-secondary">%</span></span>
+                      <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-1">Sync Rate</span>
+                    </div>
+                  </div>
 
-      {/* SWIPEABLE STATS */}
-      <div className="flex overflow-x-auto gap-4 pb-2 -mx-2 px-2 no-scrollbar">
-        {[
-          { label: 'Revenue', value: `$${wallet.total_earned}`, trend: '+12%', color: 'text-green-400', sparkColor: '#10b981' },
-          { label: 'Directs', value: '42 Active', trend: '+2', color: 'text-primary', sparkColor: '#06b6d4' },
-          { label: 'Team', value: '1,204', trend: '+18', color: 'text-secondary', sparkColor: '#a855f7' },
-          { label: 'Rewards', value: '$840', trend: 'Claim', color: 'text-amber-400', sparkColor: '#fbbf24' },
-        ].map((stat, i) => (
-          <div key={i} className="glass min-w-[160px] flex-shrink-0 p-5 rounded-[2rem] border-white/5 relative overflow-hidden">
-            <h3 className="text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] mb-1">{stat.label}</h3>
-            <p className={`text-xl font-black tracking-tighter mb-4 ${stat.color}`}>{stat.value}</p>
-            <div className="h-8 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={sparkData}>
-                  <Line type="monotone" dataKey="v" stroke={stat.sparkColor} strokeWidth={2} dot={false} isAnimationActive={false} />
-                </LineChart>
-              </ResponsiveContainer>
+                  <div className="flex-1 w-full space-y-5">
+                    <div>
+                      <p className="text-2xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-500 uppercase leading-none mb-1">Spiral Voyager</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Next Phase:</span>
+                        <span className="text-[10px] font-black text-secondary uppercase tracking-widest italic">Spiral Prime</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-500">
+                        <span>XP Progress</span>
+                        <span className="text-white">1,250 / 2,000 XP</span>
+                      </div>
+                      <div className="h-2 w-full bg-white/5 rounded-full p-[2px] border border-white/5">
+                        <div className="h-full bg-gradient-to-r from-secondary to-primary rounded-full w-[75%] relative">
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white shadow-[0_0_10px_#fff] rounded-full"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="flex-1 bg-white/5 rounded-xl p-2 border border-white/5 text-center">
+                        <p className="text-[7px] font-bold text-slate-500 uppercase mb-0.5">Directs</p>
+                        <p className="text-xs font-black text-white">{user.direct_count || 0}</p>
+                      </div>
+                      <div className="flex-1 bg-white/5 rounded-xl p-2 border border-white/5 text-center">
+                        <p className="text-[7px] font-bold text-slate-500 uppercase mb-0.5">Network</p>
+                        <p className="text-xs font-black text-white">1.2K</p>
+                      </div>
+                      <div className="flex-1 bg-white/5 rounded-xl p-2 border border-white/5 text-center">
+                        <p className="text-[7px] font-bold text-slate-500 uppercase mb-0.5">Uptime</p>
+                        <p className="text-xs font-black text-white">14D</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* INVITE PROTOCOL CARD */}
+            <div className="glass rounded-[2.5rem] p-6 border-white/5 bg-darker/40 relative overflow-hidden group">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">🔗</div>
+                  <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Invite Protocol</h3>
+                </div>
+                <span className={`text-[8px] px-2 py-1 rounded-full font-black uppercase tracking-widest ${user.is_active ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'}`}>
+                  {user.is_active ? 'Engine Online' : 'Engine Offline'}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-3 bg-black/20 rounded-2xl p-3 border border-white/5 group-hover:border-primary/30 transition-all">
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-[7px] font-bold text-slate-600 uppercase tracking-widest mb-1">Your Unique Node Access</p>
+                  <input readOnly value={referralLink} className="w-full bg-transparent border-none outline-none font-mono text-[10px] text-primary/70 truncate" />
+                </div>
+                <button 
+                  onClick={handleCopy} 
+                  className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all active:scale-90"
+                >
+                  {copied ? '✓' : '📋'}
+                </button>
+              </div>
+              
+              {copied && (
+                <div className="absolute inset-0 bg-primary/90 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-300">
+                  <span className="text-white font-black uppercase tracking-[0.3em] text-xs">Node Link Copied</span>
+                </div>
+              )}
+            </div>
+
+            {/* AUTOPOOL QUALIFICATION STATUS */}
+            {!user.is_qualified && (
+              <div className="glass rounded-[2.5rem] p-6 border-amber-500/20 bg-amber-500/5 relative overflow-hidden">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-amber-500 text-[10px] font-black uppercase tracking-[0.2em]">AutoPool Qualification</h3>
+                  <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Incomplete</span>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Progress to Pool 1</p>
+                    <p className="text-xs font-black text-white">{user.direct_count || 0} / 3 Directs</p>
+                  </div>
+                  <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-amber-500 transition-all duration-1000" 
+                      style={{ width: `${Math.min(((user.direct_count || 0) / 3) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className={`h-1 rounded-full ${user.direct_count >= 1 ? 'bg-amber-500' : 'bg-slate-800'}`}></div>
+                    <div className={`h-1 rounded-full ${user.direct_count >= 2 ? 'bg-amber-500' : 'bg-slate-800'}`}></div>
+                    <div className={`h-1 rounded-full ${user.direct_count >= 3 ? 'bg-amber-500' : 'bg-slate-800'}`}></div>
+                  </div>
+                  <p className="text-[8px] text-slate-500 uppercase leading-relaxed">
+                    Sponsor 3 active members to qualify. <br/>
+                    <span className="text-amber-500/80">1st & 3rd commissions ($10) fund your AutoPool entry.</span>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* POOL PROGRESS TREE VIEW */}
+            {user.is_qualified && activePool && (
+              <div className="glass rounded-[2.5rem] p-6 border-primary/20 bg-primary/5 relative overflow-hidden">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">Pool {activePool.pool_number} Voyager</h3>
+                    <p className="text-slate-500 text-[8px] font-bold uppercase tracking-widest mt-1">Global FIFO Matrix</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                      {activePool.members_count} / {activePool.pool_number === 1 ? 4 : 6}
+                    </span>
+                    <p className="text-[8px] text-primary font-black uppercase tracking-widest">Members Filled</p>
+                  </div>
+                </div>
+
+                {/* Visual Tree/Slots */}
+                <div className="flex flex-col items-center gap-6 py-4">
+                  {/* User Node */}
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary p-[2px] shadow-lg shadow-primary/20">
+                      <div className="w-full h-full bg-darker rounded-full flex items-center justify-center font-black text-xs text-primary italic">
+                        YOU
+                      </div>
+                    </div>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-[2px] h-6 bg-gradient-to-b from-primary/50 to-transparent"></div>
+                  </div>
+
+                  {/* Member Slots */}
+                  <div className="flex flex-wrap justify-center gap-4 mt-2">
+                    {Array.from({ length: activePool.pool_number === 1 ? 4 : 6 }).map((_, i) => {
+                      const isFilled = i < activePool.members_count;
+                      return (
+                        <div key={i} className="flex flex-col items-center gap-2">
+                          <div className={`w-8 h-8 rounded-full border-2 transition-all duration-500 ${isFilled ? 'border-primary bg-primary/20 shadow-lg shadow-primary/20' : 'border-white/5 bg-white/5'}`}>
+                            {isFilled && (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-primary">
+                                ✓
+                              </div>
+                            )}
+                          </div>
+                          <span className={`text-[8px] font-black uppercase tracking-widest ${isFilled ? 'text-primary' : 'text-slate-700'}`}>
+                            Slot {i + 1}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-white/5">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-[8px] text-slate-500 uppercase font-black">Completion Reward</p>
+                      <p className="text-lg font-black text-white">
+                        {activePool.pool_number === 1 ? '$10 + Rebirth' : `$${(Math.pow(2, activePool.pool_number - 1) * 10 * 6 * 0.5).toFixed(0)} + Upgrade`}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => onNavigate?.('pools')}
+                      className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
+                    >
+                      View All Pools →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
-        ))}
       </div>
 
       <style>{`

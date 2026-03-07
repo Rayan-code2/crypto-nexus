@@ -32,13 +32,45 @@ const MatrixNode: React.FC<MatrixNodeProps> = ({ user, level }) => {
 
 const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
   const [downline, setDownline] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [levelStats, setLevelStats] = useState<{ [key: number]: number }>({});
 
   useEffect(() => {
     const fetchDownline = async () => {
       try {
-        const data = await mockApi.db.getMatrixDownline(user.id);
-        setDownline(data);
+        const [directData, allUsersData] = await Promise.all([
+          mockApi.db.getMatrixDownline(user.id),
+          mockApi.db.getAllUsers()
+        ]);
+        setDownline(directData);
+        setAllUsers(allUsersData);
+        
+        // Calculate level stats
+        const stats: { [key: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+        const parentToChildren: { [key: string]: string[] } = {};
+        
+        allUsersData.forEach(u => {
+          if (u.matrix_parent_id) {
+            if (!parentToChildren[u.matrix_parent_id]) parentToChildren[u.matrix_parent_id] = [];
+            parentToChildren[u.matrix_parent_id].push(u.id);
+          }
+        });
+
+        // BFS to find levels
+        let currentLevelUsers = [user.id];
+        for (let l = 1; l <= 7; l++) {
+          const nextLevelUsers: string[] = [];
+          currentLevelUsers.forEach(pid => {
+            const children = parentToChildren[pid] || [];
+            nextLevelUsers.push(...children);
+          });
+          stats[l] = nextLevelUsers.length;
+          currentLevelUsers = nextLevelUsers;
+          if (currentLevelUsers.length === 0) break;
+        }
+        setLevelStats(stats);
+
       } catch (e) {
         console.error(e);
       } finally {
@@ -120,8 +152,8 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
           <div className="glass p-4 rounded-xl text-center">
-            <p className="text-xs text-slate-500">Total Referrals</p>
-            <p className="text-xl font-bold">{downline.length}</p>
+            <p className="text-xs text-slate-500">Total Team</p>
+            <p className="text-xl font-bold">{Object.values(levelStats).reduce((a: number, b: number) => a + b, 0)}</p>
           </div>
           <div className="glass p-4 rounded-xl text-center">
             <p className="text-xs text-slate-500">Active Nodes</p>
@@ -133,8 +165,36 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           </div>
           <div className="glass p-4 rounded-xl text-center">
             <p className="text-xs text-slate-500">Direct Bonus</p>
-            <p className="text-xl font-bold text-primary">${downline.length * 10}</p>
+            <p className="text-xl font-bold text-primary">${downline.length * 5}</p>
           </div>
+      </div>
+
+      {/* Level-wise Distribution Section */}
+      <div className="w-full space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-white italic uppercase tracking-wider">Level-wise Team Distribution</h3>
+          <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-1 rounded-full uppercase tracking-widest">7 Levels Depth</span>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7].map((lvl) => (
+            <div key={lvl} className="glass p-4 rounded-2xl border border-white/5 flex items-center justify-between hover:border-primary/30 transition-all group">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 group-hover:bg-primary group-hover:text-darker transition-colors">
+                  L{lvl}
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Level {lvl}</p>
+                  <p className="text-xs font-bold text-white">Generation {lvl}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-black text-primary">{levelStats[lvl] || 0}</p>
+                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Members</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

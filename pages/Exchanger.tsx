@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Copy, Check } from 'lucide-react';
 import { User, Wallet, ExchangerRequest } from '../types';
 import { MLM_CONFIG } from '../constants';
 import { mockApi } from '../lib/mockApi';
@@ -19,6 +20,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
   const [utrNumber, setUtrNumber] = useState('');
   const [userUpi, setUserUpi] = useState('');
   const [network, setNetwork] = useState('TRC20');
+  const [copied, setCopied] = useState<string | null>(null);
   const [topupAmount, setTopupAmount] = useState('');
   const [hashId, setHashId] = useState('');
   const [history, setHistory] = useState<ExchangerRequest[]>([]);
@@ -28,8 +30,14 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
   const [rates, setRates] = useState({ 
     buy: MLM_CONFIG.USDT_BUY_RATE, 
     sell: MLM_CONFIG.USDT_SELL_RATE,
-    adminUpi: 'nexus@upi',
-    adminQr: ''
+    adminUpi: 'spiral@upi',
+    adminQr: '',
+    adminAddressTrc20: 'TYL5Hw7hQ8w7X9...trc20_demo',
+    adminAddressBep20: '0x7hQ8w7X9...bep20_demo',
+    adminAddressErc20: '0xERC20...erc20_demo',
+    minDeposit: 10,
+    minWithdrawal: 20,
+    maxWithdrawal: 1000
   });
 
   const showStatus = (text: string, type: 'success' | 'error' = 'success') => {
@@ -50,8 +58,14 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
         setRates({
           buy: settingsData.usdt_buy_rate || MLM_CONFIG.USDT_BUY_RATE,
           sell: settingsData.usdt_sell_rate || MLM_CONFIG.USDT_SELL_RATE,
-          adminUpi: settingsData.admin_upi || 'nexus@upi',
-          adminQr: settingsData.admin_qr || ''
+          adminUpi: settingsData.admin_upi || 'spiral@upi',
+          adminQr: settingsData.admin_qr || '',
+          adminAddressTrc20: settingsData.admin_address_trc20 || 'TYL5Hw7hQ8w7X9...trc20_demo',
+          adminAddressBep20: settingsData.admin_address_bep20 || '0x7hQ8w7X9...bep20_demo',
+          adminAddressErc20: settingsData.admin_address_erc20 || '0xERC20...erc20_demo',
+          minDeposit: settingsData.min_deposit || 10,
+          minWithdrawal: settingsData.min_withdrawal || 20,
+          maxWithdrawal: settingsData.max_withdrawal || 1000
         });
       }
     } catch (e) {
@@ -70,6 +84,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
   const handleSubmitDeposit = async () => {
     if (!topupAmount || !hashId) {
       showStatus('Please enter both amount and Hash ID', 'error');
+      return;
+    }
+    const depositVal = parseFloat(topupAmount);
+    if (depositVal < rates.minDeposit) {
+      showStatus(`Minimum deposit is $${rates.minDeposit} USDT`, 'error');
       return;
     }
     setLoading(true);
@@ -98,12 +117,25 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
   };
 
   const handleWithdrawal = async () => {
-    if (!amount || !address) {
-      alert('Please enter both amount and destination address');
+    if (!user.is_active) {
+      showStatus('Account activation required ($10) to withdraw', 'error');
       return;
     }
-    if (parseFloat(amount) > wallet.balance) {
-      alert('Insufficient balance');
+    if (!amount || !address) {
+      showStatus('Please enter both amount and destination address', 'error');
+      return;
+    }
+    const withdrawVal = parseFloat(amount);
+    if (withdrawVal < rates.minWithdrawal) {
+      showStatus(`Minimum withdrawal is $${rates.minWithdrawal} USDT`, 'error');
+      return;
+    }
+    if (withdrawVal > rates.maxWithdrawal) {
+      showStatus(`Maximum withdrawal is $${rates.maxWithdrawal} USDT`, 'error');
+      return;
+    }
+    if (withdrawVal > wallet.balance) {
+      showStatus('Insufficient balance', 'error');
       return;
     }
     setLoading(true);
@@ -120,18 +152,22 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
       // Deduct balance immediately
       await mockApi.db.updateWallet(user.id, wallet.balance - parseFloat(amount));
       
-      alert('Withdrawal request submitted successfully!');
+      showStatus('Withdrawal request submitted successfully!');
       setAmount('');
       setAddress('');
       fetchHistory();
     } catch (e: any) {
-      alert('Failed to submit withdrawal request: ' + (e.message || 'Unknown error'));
+      showStatus('Failed to submit withdrawal request: ' + (e.message || 'Unknown error'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleInitiateSwap = async () => {
+    if (p2pType === 'sell' && !user.is_active) {
+      showStatus('Account activation required ($10) to sell', 'error');
+      return;
+    }
     if (!amount) return;
     const usdtAmount = parseFloat(amount);
     
@@ -180,19 +216,17 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
     }
   };
 
+  const getActiveAddress = () => {
+    if (network === 'TRC20') return rates.adminAddressTrc20 || 'TYL5Hw7hQ8w7X9...trc20_demo';
+    if (network === 'BEP20') return rates.adminAddressBep20 || '0x7hQ8w7X9...bep20_demo';
+    if (network === 'ERC20') return rates.adminAddressErc20 || '0xERC20...erc20_demo';
+    return 'TYL5Hw7hQ8w7X9...trc20_demo';
+  };
+
   const renderTopup = () => (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="glass p-6 rounded-3xl border-primary/20 text-center space-y-4">
         <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Deposit USDT via Crypto Gateway</p>
-        <div className="w-48 h-48 bg-white p-2 mx-auto rounded-xl shadow-2xl shadow-primary/20">
-          {/* Mock QR Code */}
-          <div className="w-full h-full bg-slate-100 flex items-center justify-center relative overflow-hidden">
-             <div className="w-full h-full flex flex-wrap opacity-20">
-                {Array.from({length: 64}).map((_, i) => <div key={i} className={`w-1/8 h-1/8 ${Math.random() > 0.5 ? 'bg-black' : 'bg-transparent'}`}></div>)}
-             </div>
-             <span className="absolute text-slate-800 font-black italic">USDT</span>
-          </div>
-        </div>
         <div className="space-y-2">
            <div className="flex gap-2 bg-slate-900 p-1 rounded-xl">
              {['TRC20', 'BEP20', 'ERC20'].map(net => (
@@ -200,14 +234,27 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
              ))}
            </div>
            <div className="bg-slate-900/50 p-4 rounded-xl flex justify-between items-center border border-white/5">
-             <span className="text-[10px] font-mono text-slate-400 truncate mr-4">TYL5Hw7hQ8w7X9...demo_addr</span>
-             <button onClick={() => alert("Copied!")} className="text-primary text-xs font-black uppercase tracking-widest border-b border-primary/20">Copy</button>
+             <span className="text-[10px] font-mono text-slate-400 truncate mr-4">{getActiveAddress()}</span>
+             <button 
+               onClick={() => {
+                 navigator.clipboard.writeText(getActiveAddress());
+                 setCopied('address');
+                 setTimeout(() => setCopied(null), 2000);
+               }} 
+               className={`transition-colors p-1 ${copied === 'address' ? 'text-green-500' : 'text-primary hover:text-white'}`}
+               title="Copy Address"
+             >
+               {copied === 'address' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+             </button>
            </div>
         </div>
       </div>
       <div className="glass p-6 rounded-3xl space-y-6">
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Deposit Amount</label>
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex justify-between">
+            <span>Deposit Amount</span>
+            <span className="text-primary/60">Min: ${rates.minDeposit} USDT</span>
+          </label>
           <div className="relative">
             <input 
               type="number" 
@@ -258,17 +305,34 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="glass p-6 rounded-3xl space-y-6">
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Destination Wallet (USDT)</label>
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Select Network (USDT)</label>
+          <div className="flex gap-2 bg-slate-900 p-1 rounded-xl">
+            {['TRC20', 'BEP20', 'ERC20'].map(net => (
+              <button 
+                key={net} 
+                onClick={() => setNetwork(net)} 
+                className={`flex-1 py-3 rounded-lg text-[10px] font-black transition-all ${network === net ? 'bg-secondary text-white shadow-lg shadow-secondary/20' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                {net}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Destination Wallet ({network})</label>
           <input 
             type="text" 
-            placeholder="0x... or T..." 
+            placeholder={`Enter your ${network} address...`} 
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm outline-none ring-1 ring-slate-800 focus:ring-secondary"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Amount to Payout</label>
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex justify-between">
+            <span>Amount to Payout</span>
+            <span className="text-secondary/60">Limit: ${rates.minWithdrawal} - ${rates.maxWithdrawal}</span>
+          </label>
           <div className="relative">
             <input 
               type="number" 
@@ -284,13 +348,28 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
             <span>Fee: $1.00 USDT</span>
           </p>
         </div>
+        {!user.is_active && (
+          <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-center">
+            <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">
+              ⚠️ ACCOUNT INACTIVE: ACTIVATE WITH $10 TO ENABLE WITHDRAWALS
+            </p>
+          </div>
+        )}
         <button 
           onClick={handleWithdrawal}
-          disabled={loading || !amount || !address}
+          disabled={loading || !amount || !address || !user.is_active}
           className="w-full py-4 bg-secondary text-white font-black rounded-2xl shadow-xl shadow-secondary/20 hover:scale-[1.02] transition-all uppercase tracking-[0.2em] text-xs disabled:opacity-50"
         >
-          {loading ? 'Transmitting...' : 'Request Secure Withdrawal'}
+          {loading ? 'Transmitting...' : !user.is_active ? 'Activation Required' : 'Request Secure Withdrawal'}
         </button>
+
+        {statusMsg && (
+          <div className={`p-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-center animate-in fade-in zoom-in ${
+            statusMsg.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+          }`}>
+            {statusMsg.text}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -369,13 +448,13 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
                       <button 
                         onClick={() => {
                           navigator.clipboard.writeText(rates.adminUpi);
-                          showStatus('UPI ID Copied!');
+                          setCopied('upi');
+                          setTimeout(() => setCopied(null), 2000);
                         }}
-                        className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                        className={`p-2 rounded-lg transition-all ${copied === 'upi' ? 'bg-green-500/20 text-green-500' : 'bg-white/5 text-amber-500 hover:bg-white/10'}`}
+                        title="Copy UPI ID"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
+                        {copied === 'upi' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
                     </div>
                     <p className="text-[9px] text-slate-600 font-bold uppercase leading-relaxed">
@@ -415,13 +494,28 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
               </div>
             )}
 
+            {p2pType === 'sell' && !user.is_active && (
+              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-center">
+                <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">
+                  ⚠️ ACCOUNT INACTIVE: ACTIVATE WITH $10 TO SELL USDT
+                </p>
+              </div>
+            )}
             <button 
               onClick={handleInitiateSwap}
-              disabled={loading || !amount}
+              disabled={loading || !amount || (p2pType === 'sell' && !user.is_active)}
               className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl bg-amber-500 text-darker hover:bg-amber-400 transition-all disabled:opacity-50"
             >
-              {loading ? 'Transmitting...' : `Initiate ${p2pType} Protocol`}
+              {loading ? 'Transmitting...' : (p2pType === 'sell' && !user.is_active) ? 'Activation Required' : `Initiate ${p2pType} Protocol`}
             </button>
+
+            {statusMsg && (
+              <div className={`p-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-center animate-in fade-in zoom-in ${
+                statusMsg.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+              }`}>
+                {statusMsg.text}
+              </div>
+            )}
           </div>
       </div>
       <div className="text-center">
@@ -439,21 +533,21 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Navigation Sidebar for Exchanger */}
-        <div className="lg:col-span-4 flex lg:flex-col gap-2 p-1 bg-darker/50 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
+        <div className="lg:col-span-4 grid grid-cols-3 lg:grid-cols-1 gap-2 p-1 bg-darker/50 rounded-2xl border border-white/5">
            {[
-             { id: 'topup', label: 'Topup (Crypto)', icon: '📥' },
-             { id: 'withdraw', label: 'Withdraw (Crypto)', icon: '📤' },
-             { id: 'swap', label: 'Swap (INR P2P)', icon: '🔄' }
+             { id: 'topup', label: 'Topup', icon: <ArrowDownCircle className="w-5 h-5" /> },
+             { id: 'withdraw', label: 'Withdraw', icon: <ArrowUpCircle className="w-5 h-5" /> },
+             { id: 'swap', label: 'Swap', icon: <RefreshCw className="w-5 h-5" /> }
            ].map(tab => (
              <button
                key={tab.id}
                onClick={() => setActiveTab(tab.id as any)}
-               className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-3 px-6 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+               className={`flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 px-2 lg:px-6 py-3 lg:py-4 rounded-xl text-[8px] lg:text-[10px] font-black uppercase tracking-widest transition-all ${
                  activeTab === tab.id ? 'bg-primary/10 text-primary border border-primary/20 shadow-lg shadow-primary/5' : 'text-slate-500 hover:text-slate-300'
                }`}
              >
-               <span className="text-lg">{tab.icon}</span>
-               {tab.label}
+               {tab.icon}
+               <span className="text-center lg:text-left">{tab.label}</span>
              </button>
            ))}
         </div>
@@ -475,7 +569,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
                        ${h.type === 'deposit' ? 'text-primary' : ''}
                        ${h.type === 'withdraw' ? 'text-secondary' : ''}
                      `}>
-                       {h.type} nexus
+                       {h.type} spiral
                      </span>
                      <span className="text-slate-500">{new Date(h.created_at).toLocaleDateString()}</span>
                      <span className="text-white">${h.amount}</span>

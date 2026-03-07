@@ -18,6 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
     { id: 'pools', label: 'Auto Pools', icon: Icons.Pools },
     { id: 'exchanger', label: 'Exchanger', icon: Icons.Exchanger },
     { id: 'tasks', label: 'Task Earning', icon: Icons.Tasks },
+    { id: 'income', label: 'Income Details', icon: Icons.Income },
   ];
 
   // Robust check for admin status
@@ -70,17 +71,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
       </aside>
 
       {/* Mobile Tab Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-slate-800 z-50 flex justify-around items-center px-1 py-3">
-        {menuItems.slice(0, 5).map((item) => (
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-slate-800 z-50 flex justify-start gap-6 items-center px-6 py-3 overflow-x-auto no-scrollbar">
+        {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center gap-1 transition-colors px-2 ${
+            className={`flex flex-col items-center gap-1 transition-colors min-w-fit ${
               activeTab === item.id ? 'text-primary' : 'text-slate-500'
             }`}
           >
             <item.icon />
-            <span className="text-[9px] font-medium whitespace-nowrap">{item.label}</span>
+            <span className="text-[10px] font-bold whitespace-nowrap uppercase tracking-tighter">
+              {item.id === 'dashboard' ? 'Home' : 
+               item.id === 'matrix' ? 'Matrix' : 
+               item.id === 'pools' ? 'Pools' : 
+               item.id === 'exchanger' ? 'Swap' : 
+               item.id === 'tasks' ? 'Tasks' : 'Income'}
+            </span>
           </button>
         ))}
       </nav>

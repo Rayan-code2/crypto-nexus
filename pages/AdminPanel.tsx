@@ -1,10 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { mockApi } from '../lib/mockApi';
 import { User, Wallet, ExchangerRequest, Task, Transaction } from '../types';
 import { BRAND_CONFIG } from '../brandConfig';
 
-const AdminPanel: React.FC = () => {
+interface AdminPanelProps {
+  user: User;
+}
+
+const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
   const [activeSubTab, setActiveSubTab] = useState<'analytics' | 'users' | 'exchanger' | 'tasks' | 'settings' | 'deposits'>('analytics');
   const [users, setUsers] = useState<(User & { wallets: Wallet[] })[]>([]);
   const [exchangeRequests, setExchangeRequests] = useState<ExchangerRequest[]>([]);
@@ -17,8 +22,20 @@ const AdminPanel: React.FC = () => {
   // System Settings State
   const [buyRate, setBuyRate] = useState(92);
   const [sellRate, setSellRate] = useState(88);
-  const [adminUpi, setAdminUpi] = useState('nexus@upi');
+  const [adminUpi, setAdminUpi] = useState('spiral@upi');
   const [adminQr, setAdminQr] = useState('');
+  const [adminAddressTrc20, setAdminAddressTrc20] = useState('TYL5Hw7hQ8w7X9...trc20_demo');
+  const [adminAddressBep20, setAdminAddressBep20] = useState('0x7hQ8w7X9...bep20_demo');
+  const [adminAddressErc20, setAdminAddressErc20] = useState('0xERC20...erc20_demo');
+  const [marqueeText, setMarqueeText] = useState('');
+  const [telegramLink, setTelegramLink] = useState('https://t.me/cryptospiral');
+  const [minDeposit, setMinDeposit] = useState(10);
+  const [minWithdrawal, setMinWithdrawal] = useState(20);
+  const [maxWithdrawal, setMaxWithdrawal] = useState(1000);
+
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [adminNewPassword, setAdminNewPassword] = useState('');
 
   // New Task Form State
   const [newTask, setNewTask] = useState({ title: '', description: '', reward: 0, link: '' });
@@ -43,8 +60,16 @@ const AdminPanel: React.FC = () => {
       if (settings) {
         setBuyRate(settings.usdt_buy_rate || 92);
         setSellRate(settings.usdt_sell_rate || 88);
-        setAdminUpi(settings.admin_upi || 'nexus@upi');
+        setAdminUpi(settings.admin_upi || 'spiral@upi');
         setAdminQr(settings.admin_qr || '');
+        setAdminAddressTrc20(settings.admin_address_trc20 || 'TYL5Hw7hQ8w7X9...trc20_demo');
+        setAdminAddressBep20(settings.admin_address_bep20 || '0x7hQ8w7X9...bep20_demo');
+        setAdminAddressErc20(settings.admin_address_erc20 || '0xERC20...erc20_demo');
+        setMarqueeText(settings.marquee_text || '⚡ NODE ACTIVE: SYSTEM ONLINE | 💎 USDT/INR: ₹92.45 (+0.4%) | 🔥 NETWORK VOLUME: $4.2M | 🚀 NEW POOL 5 ENTRY FROM ID #8291');
+        setTelegramLink(settings.telegram_link || 'https://t.me/cryptospiral');
+        setMinDeposit(settings.min_deposit || 10);
+        setMinWithdrawal(settings.min_withdrawal || 20);
+        setMaxWithdrawal(settings.max_withdrawal || 1000);
       }
     } catch (err) {
       console.error(err);
@@ -124,12 +149,44 @@ const AdminPanel: React.FC = () => {
         usdt_buy_rate: finalBuyRate,
         usdt_sell_rate: finalSellRate,
         admin_upi: adminUpi,
-        admin_qr: adminQr
+        admin_qr: adminQr,
+        admin_address_trc20: adminAddressTrc20,
+        admin_address_bep20: adminAddressBep20,
+        admin_address_erc20: adminAddressErc20,
+        marquee_text: marqueeText,
+        telegram_link: telegramLink,
+        min_deposit: minDeposit,
+        min_withdrawal: minWithdrawal,
+        max_withdrawal: maxWithdrawal
       });
       showStatus("System Rates Updated Successfully");
     } catch (e: any) {
       console.error("Rate update error:", e);
       showStatus(e.message || "Failed to update rates", "error");
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetPasswordUserId || !newPassword) return;
+    try {
+      await mockApi.db.updateUserPassword(resetPasswordUserId, newPassword);
+      showStatus("Password Reset Successfully");
+      setResetPasswordUserId(null);
+      setNewPassword('');
+    } catch (err: any) {
+      showStatus(err.message || "Failed to reset password", "error");
+    }
+  };
+
+  const handleAdminPasswordChange = async () => {
+    if (!adminNewPassword) return;
+    try {
+      await mockApi.db.updateUserPassword(user.id, adminNewPassword);
+      showStatus("Admin Password Updated Successfully");
+      setAdminNewPassword('');
+    } catch (err: any) {
+      showStatus(err.message || "Failed to update admin password", "error");
     }
   };
 
@@ -148,11 +205,7 @@ const AdminPanel: React.FC = () => {
 
       // If it's a deposit or buy and approved, add balance to user and activate account
       if ((request.type === 'deposit' || request.type === 'buy') && status === 'approved') {
-        const wallet = await mockApi.db.getWallet(request.user_id);
-        if (wallet) {
-          await mockApi.db.updateWallet(request.user_id, wallet.balance + request.amount);
-          await mockApi.db.updateUser(request.user_id, { is_active: true });
-        }
+        await mockApi.db.activateUser(request.user_id, request.amount);
       }
 
       // If it's a withdrawal or sell and rejected, refund the balance
@@ -337,6 +390,12 @@ const AdminPanel: React.FC = () => {
                           Gift
                         </button>
                         <button 
+                          onClick={() => setResetPasswordUserId(u.id)}
+                          className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500 hover:text-white transition-all"
+                        >
+                          Reset Pass
+                        </button>
+                        <button 
                           onClick={() => handleToggleBlock(u.id, u.is_blocked)}
                           className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${
                             u.is_blocked ? 'bg-green-500 text-darker shadow-lg shadow-green-500/20' : 'bg-red-500 text-white shadow-lg shadow-red-500/20 hover:scale-105'
@@ -399,6 +458,12 @@ const AdminPanel: React.FC = () => {
                         Gift
                       </button>
                       <button 
+                        onClick={() => setResetPasswordUserId(u.id)}
+                        className="p-3 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                      <button 
                         onClick={() => handleToggleBlock(u.id, u.is_blocked)}
                         className={`p-3 rounded-xl ${u.is_blocked ? 'bg-green-500 text-darker' : 'bg-red-500 text-white'}`}
                       >
@@ -409,6 +474,53 @@ const AdminPanel: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resetPasswordUserId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-darker/80 backdrop-blur-md animate-in fade-in">
+          <div className="glass w-full max-w-md p-8 rounded-[3rem] border-blue-500/20 shadow-2xl shadow-blue-500/10">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-blue-500/20 rounded-3xl mx-auto flex items-center justify-center text-3xl mb-4">🔑</div>
+              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Reset Agent Password</h3>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-2">Setting new credentials for Node ID: {resetPasswordUserId.slice(0, 12)}...</p>
+            </div>
+            
+            <form onSubmit={handleResetPassword} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">New Password</label>
+                <input 
+                  type="text" 
+                  autoFocus
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password..."
+                  className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-white/5 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setResetPasswordUserId(null);
+                    setNewPassword('');
+                  }}
+                  className="flex-1 py-4 bg-white/5 text-slate-400 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all"
+                >
+                  Abort
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 py-4 bg-blue-500 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  Confirm Reset
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -461,68 +573,213 @@ const AdminPanel: React.FC = () => {
 
       {/* Exchange View (P2P) */}
       {activeSubTab === 'exchanger' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in">
-          {exchangeRequests.filter(r => r.type === 'buy' || r.type === 'sell').map((ex) => (
-            <div key={ex.id} className="glass p-8 rounded-[3rem] border-white/5 relative overflow-hidden">
-               <div className={`absolute top-0 right-0 px-6 py-2 rounded-bl-3xl text-[10px] font-black uppercase tracking-[0.2em] ${
-                ex.type === 'buy' ? 'bg-primary text-darker' : 'bg-secondary text-white'
-              }`}>
-                {ex.type} Protocol
-              </div>
-              <div className="mb-8">
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Requested Volume</p>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-5xl font-black text-white">${ex.amount}</span>
-                  <span className="text-primary font-black text-xs uppercase tracking-[0.2em]">USDT</span>
-                  <span className="mx-2 text-slate-700 text-2xl">/</span>
-                  <span className="text-2xl font-bold text-slate-400">₹{ex.inr_amount}</span>
-                </div>
-                <p className="text-[10px] text-slate-600 font-bold uppercase mt-4">Agent ID: {ex.user_id}</p>
-                {ex.utr_number && (
-                  <div className="mt-4 p-4 bg-primary/10 rounded-2xl border border-primary/20">
-                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">UTR / Transaction ID</p>
-                    <p className="text-xl font-black text-white tracking-widest">{ex.utr_number}</p>
-                  </div>
-                )}
-                {ex.user_upi && (
-                  <div className="mt-4 p-4 bg-secondary/10 rounded-2xl border border-secondary/20">
-                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">User UPI ID (Pay Here)</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xl font-black text-white">{ex.user_upi}</p>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(ex.user_upi!);
-                          showStatus('User UPI Copied!');
-                        }}
-                        className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+        <div className="space-y-4 animate-in fade-in">
+          <div className="glass rounded-[2.5rem] overflow-hidden border-white/5">
+            <div className="p-8 border-b border-white/5 flex justify-between items-center">
+              <h3 className="text-xl font-black uppercase italic">P2P Exchange Protocols</h3>
               <div className="flex gap-4">
-                <button 
-                  onClick={() => handleApproveExchange(ex.id, 'approved')}
-                  disabled={ex.status !== 'pending' || processing === ex.id}
-                  className="flex-1 py-4 bg-green-500 disabled:bg-slate-800 disabled:text-slate-600 text-darker font-black rounded-2xl uppercase text-[11px] tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-green-500/10"
-                >
-                  {processing === ex.id ? 'Processing...' : (ex.status === 'approved' ? 'Processed' : 'Authorize Order')}
-                </button>
-                {ex.status === 'pending' && (
-                  <button 
-                    onClick={() => handleApproveExchange(ex.id, 'rejected')}
-                    className="flex-1 py-4 bg-white/5 text-red-500 font-black rounded-2xl uppercase text-[11px] tracking-widest hover:bg-red-500 hover:text-white transition-all"
-                  >
-                    Deny
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live P2P Stream</span>
+                </div>
               </div>
             </div>
-          ))}
+            
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left">
+                <thead className="bg-slate-900/50 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                  <tr>
+                    <th className="px-8 py-5">Protocol</th>
+                    <th className="px-8 py-5">USDT / INR Volume</th>
+                    <th className="px-8 py-5">Agent / Node</th>
+                    <th className="px-8 py-5">Payment Details</th>
+                    <th className="px-8 py-5 text-right">Authorization</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {exchangeRequests.filter(r => r.type === 'buy' || r.type === 'sell').length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-8 py-20 text-center">
+                        <p className="text-slate-600 font-black uppercase tracking-[0.3em] text-xs italic">No active P2P protocols detected...</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    exchangeRequests.filter(r => r.type === 'buy' || r.type === 'sell').map((ex) => (
+                      <tr key={ex.id} className="hover:bg-white/5 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs ${ex.type === 'buy' ? 'bg-primary/20 text-primary' : 'bg-secondary/20 text-secondary'}`}>
+                              {ex.type === 'buy' ? 'B' : 'S'}
+                            </div>
+                            <span className={`font-black uppercase text-[10px] tracking-widest ${ex.type === 'buy' ? 'text-primary' : 'text-secondary'}`}>
+                              {ex.type}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-col">
+                            <span className="text-xl font-black text-white">${ex.amount} USDT</span>
+                            <span className="text-[10px] font-bold text-slate-500">₹{ex.inr_amount} INR</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <p className="text-xs font-bold text-slate-300">{ex.user_id}</p>
+                          <p className="text-[8px] text-slate-600 font-mono uppercase">Node ID: {ex.id.slice(0, 8)}</p>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="space-y-1">
+                            {ex.utr_number && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[8px] text-slate-500 uppercase font-black">UTR:</span>
+                                <span className="text-[10px] font-mono text-white tracking-widest">{ex.utr_number}</span>
+                              </div>
+                            )}
+                            {ex.user_upi && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[8px] text-slate-500 uppercase font-black">UPI:</span>
+                                <span className="text-[10px] font-mono text-white">{ex.user_upi}</span>
+                                <button 
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(ex.user_upi!);
+                                    showStatus('User UPI Copied!');
+                                  }}
+                                  className="p-1 bg-white/5 rounded hover:bg-white/10 transition-colors"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex justify-end gap-2">
+                            {ex.status === 'pending' ? (
+                              <>
+                                <button 
+                                  onClick={() => handleApproveExchange(ex.id, 'rejected')}
+                                  disabled={processing === ex.id}
+                                  className="px-4 py-2 rounded-xl bg-white/5 text-red-500 font-black uppercase text-[9px] tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                                >
+                                  Deny
+                                </button>
+                                <button 
+                                  onClick={() => handleApproveExchange(ex.id, 'approved')}
+                                  disabled={processing === ex.id}
+                                  className="px-6 py-2 rounded-xl bg-green-500 text-darker font-black uppercase text-[9px] tracking-widest hover:scale-105 transition-all shadow-lg shadow-green-500/20"
+                                >
+                                  {processing === ex.id ? 'Wait...' : 'Authorize'}
+                                </button>
+                              </>
+                            ) : (
+                              <span className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${ex.status === 'approved' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                {ex.status}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-white/5">
+              {exchangeRequests.filter(r => r.type === 'buy' || r.type === 'sell').length === 0 ? (
+                <div className="p-10 text-center">
+                  <p className="text-slate-600 font-black uppercase tracking-widest text-[10px]">No active P2P protocols...</p>
+                </div>
+              ) : (
+                exchangeRequests.filter(r => r.type === 'buy' || r.type === 'sell').map((ex) => (
+                  <div key={ex.id} className="p-6 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm ${ex.type === 'buy' ? 'bg-primary/20 text-primary' : 'bg-secondary/20 text-secondary'}`}>
+                          {ex.type === 'buy' ? 'B' : 'S'}
+                        </div>
+                        <div>
+                          <p className={`text-[10px] font-black uppercase tracking-widest ${ex.type === 'buy' ? 'text-primary' : 'text-secondary'}`}>{ex.type}</p>
+                          <p className="text-2xl font-black text-white">${ex.amount}</p>
+                          <p className="text-[10px] font-bold text-slate-500">₹{ex.inr_amount}</p>
+                        </div>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${ex.status === 'approved' ? 'bg-green-500/10 text-green-500' : ex.status === 'pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-red-500/10 text-red-500'}`}>
+                        {ex.status}
+                      </span>
+                    </div>
+                    
+                    <div className="bg-white/5 p-4 rounded-2xl space-y-2">
+                      <div className="flex justify-between text-[9px]">
+                        <span className="text-slate-500 uppercase font-black">Agent</span>
+                        <span className="text-slate-300 font-bold">{ex.user_id}</span>
+                      </div>
+                      {ex.utr_number && (
+                        <div className="flex justify-between items-center text-[9px]">
+                          <span className="text-slate-500 uppercase font-black">UTR</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-mono">{ex.utr_number}</span>
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(ex.utr_number!);
+                                showStatus('UTR Copied!');
+                              }}
+                              className="p-1 bg-white/5 rounded"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {ex.user_upi && (
+                        <div className="flex justify-between items-center text-[9px]">
+                          <span className="text-slate-500 uppercase font-black">User UPI</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-mono">{ex.user_upi}</span>
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(ex.user_upi!);
+                                showStatus('User UPI Copied!');
+                              }}
+                              className="p-1 bg-white/5 rounded"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {ex.status === 'pending' && (
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => handleApproveExchange(ex.id, 'rejected')}
+                          disabled={processing === ex.id}
+                          className="flex-1 py-3 bg-white/5 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
+                        >
+                          Deny
+                        </button>
+                        <button 
+                          onClick={() => handleApproveExchange(ex.id, 'approved')}
+                          disabled={processing === ex.id}
+                          className="flex-2 py-3 bg-green-500 text-darker font-black rounded-xl uppercase text-[10px] tracking-widest shadow-lg shadow-green-500/20"
+                        >
+                          {processing === ex.id ? 'Wait...' : 'Authorize'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -580,8 +837,32 @@ const AdminPanel: React.FC = () => {
                           <p className="text-[8px] text-slate-600 font-mono uppercase">Node ID: {dep.id.slice(0, 8)}</p>
                         </td>
                         <td className="px-8 py-5">
-                          <div className="space-y-1">
-                            {dep.network && <p className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">{dep.network} Protocol</p>}
+                          <div className="space-y-2">
+                            {dep.network && (
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                                dep.network === 'TRC20' ? 'bg-red-500/10 text-red-500' :
+                                dep.network === 'BEP20' ? 'bg-amber-500/10 text-amber-500' :
+                                'bg-blue-500/10 text-blue-500'
+                              }`}>
+                                {dep.network}
+                              </span>
+                            )}
+                            {dep.address && (
+                              <div className="flex items-center gap-2">
+                                <p className="text-[8px] text-slate-400 font-mono truncate w-32" title={dep.address}>ADDR: {dep.address}</p>
+                                <button 
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(dep.address!);
+                                    showStatus('Address Copied!');
+                                  }}
+                                  className="p-1 bg-white/5 rounded hover:bg-white/10 transition-colors"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
                             {dep.hash_id && <p className="text-[8px] text-slate-600 font-mono truncate w-32" title={dep.hash_id}>HASH: {dep.hash_id}</p>}
                           </div>
                         </td>
@@ -648,14 +929,52 @@ const AdminPanel: React.FC = () => {
                         <span className="text-slate-300 font-bold">{dep.user_id}</span>
                       </div>
                       {dep.network && (
-                        <div className="flex justify-between text-[9px]">
+                        <div className="flex justify-between items-center text-[9px]">
                           <span className="text-slate-500 uppercase font-black">Network</span>
-                          <span className="text-slate-300 font-bold">{dep.network}</span>
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                            dep.network === 'TRC20' ? 'bg-red-500/10 text-red-500' :
+                            dep.network === 'BEP20' ? 'bg-amber-500/10 text-amber-500' :
+                            'bg-blue-500/10 text-blue-500'
+                          }`}>
+                            {dep.network}
+                          </span>
+                        </div>
+                      )}
+                      {dep.address && (
+                        <div className="flex flex-col gap-1 pt-1 border-t border-white/5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[8px] text-slate-500 uppercase font-black">Wallet Address</span>
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(dep.address!);
+                                showStatus('Address Copied!');
+                              }}
+                              className="p-1 bg-white/5 rounded"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                          <span className="text-[8px] text-slate-400 font-mono break-all">{dep.address}</span>
                         </div>
                       )}
                       {dep.hash_id && (
                         <div className="flex flex-col gap-1 pt-1 border-t border-white/5">
-                          <span className="text-[8px] text-slate-500 uppercase font-black">Hash ID</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[8px] text-slate-500 uppercase font-black">Hash ID</span>
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(dep.hash_id!);
+                                showStatus('Hash ID Copied!');
+                              }}
+                              className="p-1 bg-white/5 rounded"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
                           <span className="text-[8px] text-slate-400 font-mono break-all">{dep.hash_id}</span>
                         </div>
                       )}
@@ -772,7 +1091,7 @@ const AdminPanel: React.FC = () => {
                       type="text" 
                       value={adminUpi} 
                       onChange={e => setAdminUpi(e.target.value)} 
-                      placeholder="nexus@upi"
+                      placeholder="spiral@upi"
                       className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500" 
                     />
                  </div>
@@ -788,11 +1107,131 @@ const AdminPanel: React.FC = () => {
                  </div>
               </div>
 
+              <div className="space-y-6">
+                 <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">System Marquee Announcement</h4>
+                 <div className="space-y-2">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Marquee Text (Dashboard Top Bar)</label>
+                    <textarea 
+                      value={marqueeText} 
+                      onChange={e => setMarqueeText(e.target.value)} 
+                      placeholder="Enter announcement text here..."
+                      rows={3}
+                      className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500 resize-none" 
+                    />
+                    <p className="text-[8px] text-slate-600 font-bold uppercase tracking-widest">Tip: Use emojis and | separator for a professional look.</p>
+                 </div>
+              </div>
+
+              <div className="space-y-6">
+                 <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">Transaction Limits (USDT)</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Min Deposit</label>
+                       <input 
+                         type="number" 
+                         value={minDeposit} 
+                         onChange={e => setMinDeposit(parseFloat(e.target.value))} 
+                         className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500" 
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Min Withdrawal</label>
+                       <input 
+                         type="number" 
+                         value={minWithdrawal} 
+                         onChange={e => setMinWithdrawal(parseFloat(e.target.value))} 
+                         className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500" 
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Max Withdrawal</label>
+                       <input 
+                         type="number" 
+                         value={maxWithdrawal} 
+                         onChange={e => setMaxWithdrawal(parseFloat(e.target.value))} 
+                         className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500" 
+                       />
+                    </div>
+                 </div>
+              </div>
+
+              <div className="space-y-6">
+                 <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">Deposit Addresses (USDT)</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">TRC20 Address</label>
+                       <input 
+                         type="text" 
+                         value={adminAddressTrc20} 
+                         onChange={e => setAdminAddressTrc20(e.target.value)} 
+                         placeholder="TRC20 Address..."
+                         className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500" 
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">BEP20 Address</label>
+                       <input 
+                         type="text" 
+                         value={adminAddressBep20} 
+                         onChange={e => setAdminAddressBep20(e.target.value)} 
+                         placeholder="BEP20 Address..."
+                         className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500" 
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">ERC20 Address</label>
+                       <input 
+                         type="text" 
+                         value={adminAddressErc20} 
+                         onChange={e => setAdminAddressErc20(e.target.value)} 
+                         placeholder="ERC20 Address..."
+                         className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500" 
+                       />
+                    </div>
+                 </div>
+              </div>
+
               <div className="bg-amber-500/5 p-6 rounded-2xl border border-amber-500/10">
                  <p className="text-[10px] font-bold text-amber-500 uppercase leading-relaxed tracking-wider">
                     Note: Adjusting these rates will immediately affect the P2P Exchanger for all users. System updates take 3-5 seconds to propagate across all edge nodes.
                  </p>
               </div>
+
+               <div className="space-y-6">
+                  <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">Support & Community</h4>
+                  <div className="space-y-2">
+                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Telegram Support Link</label>
+                     <input 
+                       type="text" 
+                       value={telegramLink} 
+                       onChange={e => setTelegramLink(e.target.value)} 
+                       placeholder="https://t.me/your_channel"
+                       className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500" 
+                     />
+                  </div>
+               </div>
+
+               <div className="space-y-6">
+                  <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">Admin Security</h4>
+                  <div className="space-y-4">
+                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Change Admin Password</label>
+                     <div className="flex gap-4">
+                        <input 
+                          type="password" 
+                          value={adminNewPassword} 
+                          onChange={e => setAdminNewPassword(e.target.value)} 
+                          placeholder="Enter new admin password..."
+                          className="flex-1 bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500" 
+                        />
+                        <button 
+                          onClick={handleAdminPasswordChange}
+                          className="px-6 py-3 bg-white/5 text-amber-500 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-darker transition-all"
+                        >
+                          Update
+                        </button>
+                     </div>
+                  </div>
+               </div>
 
               <button onClick={handleUpdateRates} className="w-full py-5 bg-amber-500 text-darker font-black rounded-[2rem] uppercase tracking-[0.3em] shadow-2xl shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all">
                  Apply Global Updates

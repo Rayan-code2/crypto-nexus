@@ -88,7 +88,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onDemoMode }) => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="agent@nexus.io"
+                  placeholder="agent@spiral.io"
                   className="w-full bg-slate-900/80 border border-white/5 rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary/40 transition-all text-white placeholder:text-slate-600 font-medium"
                 />
               </div>
@@ -155,53 +155,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onDemoMode }) => {
               </button>
             </div>
             
-            {/* Nexus Uplink Status - Appwrite Mode */}
-            <div className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] text-slate-400 font-mono leading-relaxed">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest">
-                  <div className={`w-1.5 h-1.5 rounded-full ${isAppwriteConfigured() ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></div>
-                  <span>{BRAND_CONFIG.shortName} Uplink Status</span>
-                </div>
-                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${isAppwriteConfigured() ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                  {isAppwriteConfigured() ? 'Appwrite Cloud' : 'Local Mode'}
-                </span>
-              </div>
-              
-              <p>• Gateway: {isAppwriteConfigured() ? 'cloud.appwrite.io' : 'Local Storage'}</p>
-              <p>• Region: {isAppwriteConfigured() ? 'Global (Live)' : 'Client-Side (Offline)'}</p>
-              <p className={`${isAppwriteConfigured() ? 'text-emerald-500/80' : 'text-amber-500/80'} mt-1`}>
-                • Status: {isAppwriteConfigured() ? 'CONNECTED' : 'READY FOR TESTING'}
-              </p>
-              <p className="text-slate-500 italic mt-2 leading-tight">
-                {isAppwriteConfigured() 
-                  ? 'System is live on Appwrite Cloud. No VPN required.' 
-                  : 'Note: In local mode, data is saved only in your browser.'}
-              </p>
-              
-              <div className="flex gap-2 mt-4">
-                <button 
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="flex-1 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border border-primary/20"
-                >
-                  Refresh System
-                </button>
-              </div>
+            {/* Region Global Live Indicator */}
+            <div className="flex items-center justify-center gap-2 py-3 px-6 bg-white/5 border border-white/10 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Region: Global (Live)</span>
             </div>
             
             <div className="w-full h-px bg-white/5 my-2"></div>
-
-            <button 
-              onClick={onDemoMode}
-              className="group flex flex-col items-center gap-2 transition-all"
-            >
-              <span className="text-[10px] font-black text-slate-500 group-hover:text-primary uppercase tracking-[0.3em] transition-colors">Emergency Bypass</span>
-              <span className="text-[9px] font-bold text-slate-700 uppercase tracking-widest group-hover:text-slate-400">Enter Demo Mode (Read-Only)</span>
-            </button>
           </div>
         </div>
         
-        <p className="mt-8 text-center text-[9px] font-black text-slate-600 uppercase tracking-[0.4em]">{BRAND_CONFIG.shortName} Core v4.2.0 • Local Testing Protocol</p>
+        <p className="mt-8 text-center text-[9px] font-black text-slate-600 uppercase tracking-[0.4em]">SPIRAL Core v4.2.0 • Global Protocol</p>
       </div>
     </div>
   );
