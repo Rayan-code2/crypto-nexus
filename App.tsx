@@ -10,6 +10,7 @@ import TaskCenter from './pages/TaskCenter';
 import IncomeDetails from './pages/IncomeDetails';
 import AdminPanel from './pages/AdminPanel';
 import Login from './pages/Login';
+import InstallPrompt from './components/InstallPrompt';
 import { mockApi } from './lib/mockApi';
 import { BRAND_CONFIG } from './brandConfig';
 
@@ -203,6 +204,7 @@ const App: React.FC = () => {
           </div>
         </header>
         <div className="p-4 sm:p-6 pb-24 sm:pb-6">{renderContent()}</div>
+        <InstallPrompt />
       </main>
     </div>
   );

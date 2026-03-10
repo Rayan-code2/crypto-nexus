@@ -10,42 +10,64 @@ export const appwriteService = {
         await account.create(userId, email, pass);
         
         // Create user profile in database
-        await databases.createDocument(
-          APPWRITE_CONFIG.databaseId!,
-          APPWRITE_CONFIG.collections.users!,
-          userId,
-          {
-            email,
-            role: email.includes('admin') ? 'admin' : 'user',
-            level: 1,
-            sponsor_id: sponsorId || null,
-            matrix_parent_id: null,
-            matrix_position: null,
-            direct_count: 0,
-            is_blocked: false,
-            is_active: false,
-            is_qualified: false,
-            created_at: new Date().toISOString()
+        const userData: any = {
+          email,
+          role: email.includes('admin') ? 'admin' : 'user',
+          level: 1,
+          sponsor_id: sponsorId || null,
+          matrix_parent_id: null,
+          matrix_position: null,
+          direct_count: 0,
+          children_count: 0,
+          is_blocked: false,
+          is_active: false,
+          is_qualified: false,
+          created_at: new Date().toISOString()
+        };
+
+        try {
+          await databases.createDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.users!,
+            userId,
+            userData
+          );
+        } catch (error: any) {
+          if (error.message?.includes('UNKNOWN_ATTRIBUTE')) {
+            const attr = error.message.match(/"([^"]+)"/)?.[1] || "required attributes";
+            throw new Error(`Appwrite Schema Error: Please add '${attr}' (String/Integer/Boolean) attribute to your 'users' collection in Appwrite Console.`);
           }
-        );
+          throw error;
+        }
 
         // Create initial wallet
-        await databases.createDocument(
-          APPWRITE_CONFIG.databaseId!,
-          APPWRITE_CONFIG.collections.wallets!,
-          ID.unique(),
-          {
-            user_id: userId,
-            balance: 0,
-            total_earned: 0,
-            roi_earned: 0,
-            wallet_roi_earned: 0,
-            pool_roi_earned: 0,
-            total_withdrawn: 0,
-            last_roi_at: new Date().toISOString(),
-            last_pool_roi_at: new Date().toISOString()
+        try {
+          await databases.createDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.wallets!,
+            ID.unique(),
+            {
+              user_id: userId,
+              balance: 0,
+              total_earned: 0,
+              roi_earned: 0,
+              wallet_roi_earned: 0,
+              pool_roi_earned: 0,
+              direct_income: 0,
+              level_income: 0,
+              hold_balance: 0,
+              total_withdrawn: 0,
+              last_roi_at: new Date().toISOString(),
+              last_pool_roi_at: new Date().toISOString()
+            }
+          );
+        } catch (error: any) {
+          if (error.message?.includes('UNKNOWN_ATTRIBUTE')) {
+            const attr = error.message.match(/"([^"]+)"/)?.[1] || "required attributes";
+            throw new Error(`Appwrite Schema Error: Please add '${attr}' (Float/Integer) attribute to your 'wallets' collection in Appwrite Console.`);
           }
-        );
+          throw error;
+        }
 
         return { user: { id: userId, email } };
       } catch (error: any) {
@@ -155,12 +177,24 @@ export const appwriteService = {
 
     getExchangeRequests: async (userId?: string) => {
       const queries = userId ? [Query.equal('user_id', userId)] : [];
+      queries.push(Query.orderDesc('created_at'));
+      queries.push(Query.limit(100));
+      
       const response = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.exchanger!,
         queries
       );
       return response.documents.map(doc => ({ ...doc, id: doc.$id }));
+    },
+
+    getExchangeRequest: async (requestId: string) => {
+      const doc = await databases.getDocument(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.exchanger!,
+        requestId
+      );
+      return { ...doc, id: doc.$id };
     },
 
     createExchangeRequest: async (data: any) => {
@@ -207,10 +241,11 @@ export const appwriteService = {
       );
     },
 
-    getAllUsers: async () => {
+    getAllUsers: async (limit = 50, offset = 0) => {
       const response = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.users!
+        APPWRITE_CONFIG.collections.users!,
+        [Query.limit(limit), Query.offset(offset), Query.orderDesc('created_at')]
       );
       return response.documents.map(doc => ({ ...doc, id: doc.$id }));
     },
@@ -241,6 +276,127 @@ export const appwriteService = {
         wallet.$id,
         { balance: amount }
       );
+    },
+
+    deleteUser: async (userId: string) => {
+      // 1. Delete user from database
+      await databases.deleteDocument(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.users!,
+        userId
+      );
+      
+      // 2. Delete wallet
+      const wallet = await appwriteService.db.getWallet(userId);
+      if (wallet) {
+        await databases.deleteDocument(
+          APPWRITE_CONFIG.databaseId!,
+          APPWRITE_CONFIG.collections.wallets!,
+          wallet.$id
+        );
+      }
+
+      // 3. Delete other related data (Transactions, Exchanger, Submissions, Pools)
+      const collectionsToClean = [
+        { id: APPWRITE_CONFIG.collections.transactions!, name: 'transactions' },
+        { id: APPWRITE_CONFIG.collections.exchanger!, name: 'exchanger' },
+        { id: APPWRITE_CONFIG.collections.submissions!, name: 'submissions' },
+        { id: APPWRITE_CONFIG.collections.pools!, name: 'pools' }
+      ];
+
+      for (const col of collectionsToClean) {
+        if (!col.id) continue;
+        try {
+          // Delete up to 500 records (usually enough for a single user)
+          const docs = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId!,
+            col.id,
+            [Query.equal('user_id', userId), Query.limit(100)]
+          );
+          
+          for (const doc of docs.documents) {
+            await databases.deleteDocument(APPWRITE_CONFIG.databaseId!, col.id, doc.$id);
+          }
+          
+          // If there were 100, there might be more, but for a single user delete, 
+          // we usually don't expect thousands of records in these specific collections 
+          // that would block the UI.
+        } catch (e) {
+          console.error(`Error cleaning up ${col.name} for user ${userId}:`, e);
+        }
+      }
+    },
+
+    purgeAllData: async () => {
+      const collections = [
+        { id: APPWRITE_CONFIG.collections.users!, name: 'users' },
+        { id: APPWRITE_CONFIG.collections.wallets!, name: 'wallets' },
+        { id: APPWRITE_CONFIG.collections.transactions!, name: 'transactions' },
+        { id: APPWRITE_CONFIG.collections.exchanger!, name: 'exchanger' },
+        { id: APPWRITE_CONFIG.collections.tasks!, name: 'tasks' },
+        { id: APPWRITE_CONFIG.collections.submissions!, name: 'submissions' },
+        { id: APPWRITE_CONFIG.collections.pools!, name: 'pools' }
+      ];
+
+      for (const col of collections) {
+        if (!col.id) continue;
+        let hasMore = true;
+        let attempt = 0;
+        let offset = 0;
+        const maxAttempts = 50; // Increased safety break
+
+        while (hasMore && attempt < maxAttempts) {
+          attempt++;
+          try {
+            const docs = await databases.listDocuments(APPWRITE_CONFIG.databaseId!, col.id, [
+              Query.limit(100),
+              Query.offset(offset)
+            ]);
+            
+            if (docs.documents.length === 0) {
+              hasMore = false;
+              break;
+            }
+
+            let deletedInThisBatch = 0;
+            for (const doc of docs.documents) {
+              // Skip admin users
+              if (col.name === 'users' && doc.role === 'admin') continue;
+              
+              // Skip admin wallets
+              if (col.name === 'wallets') {
+                try {
+                  const user = await databases.getDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, doc.user_id);
+                  if (user.role === 'admin') continue;
+                } catch (e) {
+                  // If user not found, it's an orphan, delete it
+                }
+              }
+
+              await databases.deleteDocument(APPWRITE_CONFIG.databaseId!, col.id, doc.$id);
+              deletedInThisBatch++;
+            }
+
+            // If we didn't delete anything in this batch but there are documents, 
+            // it means they are all admins/protected. Increase offset to skip them.
+            if (deletedInThisBatch === 0) {
+              offset += docs.documents.length;
+            } else {
+              // We deleted some, so the list shifted. 
+              // We don't necessarily need to increase offset because the next batch 
+              // will "slide up" into the current window.
+              // However, we should reset offset if we cleared everything that was before it.
+              // For simplicity, if we deleted anything, we stay at current offset 
+              // but check if we are still finding documents.
+            }
+            
+            hasMore = docs.documents.length === 100;
+          } catch (error) {
+            console.error(`Error purging collection ${col.name}:`, error);
+            hasMore = false;
+          }
+        }
+      }
     },
 
     updateUserPassword: async (userId: string, newPassword: string) => {
@@ -374,38 +530,88 @@ export const appwriteService = {
 
       // REMOVED: Automatic Pool 1 Entry here. It now happens via sponsor's direct count.
       
-      // 2. Find Matrix Parent (Global Forced Matrix 2xN)
-      const activeUsersRes = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.users!,
-        [Query.equal('is_active', true), Query.notEqual('$id', userId), Query.orderAsc('created_at')]
-      );
-      
-      let parentId = null;
-      let position: 'left' | 'right' = 'left';
-
-      for (const u of activeUsersRes.documents) {
-        const childrenRes = await databases.listDocuments(
+      // 2. Find Matrix Parent (Global Forced Matrix 2xN) - OPTIMIZED for Millions of Users
+      let parentId: string | null = null;
+      try {
+        const potentialParents = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId!,
           APPWRITE_CONFIG.collections.users!,
-          [Query.equal('matrix_parent_id', u.$id)]
+          [
+            Query.equal('is_active', true),
+            Query.notEqual('$id', userId),
+            Query.lessThan('children_count', 2),
+            Query.orderAsc('created_at'),
+            Query.limit(1)
+          ]
         );
-        if (childrenRes.total === 0) {
-          parentId = u.$id;
-          position = 'left';
-          break;
-        } else if (childrenRes.total === 1) {
-          parentId = u.$id;
-          position = 'right';
-          break;
-        }
-      }
+        
+        let position: 'left' | 'right' = 'left';
 
-      if (parentId) {
-        await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId, {
-          matrix_parent_id: parentId,
-          matrix_position: position
-        });
+        if (potentialParents.documents.length > 0) {
+          const parent = potentialParents.documents[0] as any;
+          parentId = parent.$id;
+          
+          // Determine position based on current children count
+          const childrenRes = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.users!,
+            [Query.equal('matrix_parent_id', parentId)]
+          );
+          position = childrenRes.total === 0 ? 'left' : 'right';
+
+          // Update parent's children count
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.users!,
+            parentId,
+            { children_count: (parent.children_count || 0) + 1 }
+          );
+
+          await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId, {
+            matrix_parent_id: parentId,
+            matrix_position: position
+          });
+        } else {
+          // FALLBACK: If no active parent found with space, find the first admin
+          const admins = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.users!,
+            [Query.equal('role', 'admin'), Query.limit(1)]
+          );
+          
+          if (admins.documents.length > 0) {
+            const admin = admins.documents[0] as any;
+            // Only place under admin if it's not the user themselves
+            if (admin.$id !== userId) {
+              parentId = admin.$id;
+              
+              const childrenRes = await databases.listDocuments(
+                APPWRITE_CONFIG.databaseId!,
+                APPWRITE_CONFIG.collections.users!,
+                [Query.equal('matrix_parent_id', parentId)]
+              );
+              position = childrenRes.total === 0 ? 'left' : 'right';
+
+              await databases.updateDocument(
+                APPWRITE_CONFIG.databaseId!,
+                APPWRITE_CONFIG.collections.users!,
+                parentId,
+                { children_count: (admin.children_count || 0) + 1 }
+              );
+
+              await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId, {
+                matrix_parent_id: parentId,
+                matrix_position: position
+              });
+            }
+          }
+        }
+      } catch (error: any) {
+        if (error.message?.includes('children_count')) {
+          throw new Error("Appwrite Schema Error: Please add 'children_count' (Integer, default 0) attribute to your 'users' collection in Appwrite Console.");
+        }
+        console.error("Matrix placement error:", error);
+        // Continue even if matrix fails, so user is at least active
       }
 
       // 3. Distribute Direct Commission ($5) to Sponsor (ONLY IF ACTIVE)
@@ -450,10 +656,37 @@ export const appwriteService = {
             } else {
               walletUpdate.balance = (sponsorWallet.balance || 0) + 5;
               walletUpdate.total_earned = (sponsorWallet.total_earned || 0) + 5;
+              walletUpdate.direct_income = (sponsorWallet.direct_income || 0) + 5;
             }
 
             await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, sponsor.$id, updateData);
             await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.wallets!, (sponsorWallet as any).$id, walletUpdate);
+
+            // Trigger AutoPool Filling for Pool 1 because a new person has actually entered
+            if (updateData.is_qualified) {
+              try {
+                await appwriteService.db.processPoolFilling(sponsor.$id, 1);
+              } catch (e) {
+                console.error("Pool filling error on qualification:", e);
+              }
+            }
+
+            // Log Direct Commission Transaction
+            if (walletUpdate.balance > 0) {
+              await databases.createDocument(
+                APPWRITE_CONFIG.databaseId!,
+                APPWRITE_CONFIG.collections.transactions!,
+                ID.unique(),
+                {
+                  user_id: sponsor.$id,
+                  from_user_id: userId,
+                  type: 'direct',
+                  amount: 5,
+                  status: 'completed',
+                  created_at: new Date().toISOString()
+                }
+              );
+            }
           }
         } catch (e) {
           console.error("Sponsor commission error:", e);
@@ -461,42 +694,62 @@ export const appwriteService = {
       }
 
       // 4. Distribute Level Commission ($0.50) to Matrix Parents (6 levels) (ONLY IF ACTIVE)
-      let currentParentId = parentId;
-      for (let level = 1; level <= 6; level++) {
-        if (!currentParentId) break;
-        try {
-          const p = await databases.getDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, currentParentId) as any;
-          if (p.is_active) {
-            const pWallet = await appwriteService.db.getWallet(p.$id) as any as Wallet;
-            
-            await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.wallets!, (pWallet as any).$id, {
-              balance: (pWallet.balance || 0) + 0.5,
-              total_earned: (pWallet.total_earned || 0) + 0.5
-            });
-          }
-          currentParentId = p.matrix_parent_id;
-        } catch (e) {
-          break;
-        }
-      }
+      try {
+        let currentParentId = parentId;
+        for (let level = 1; level <= 6; level++) {
+          if (!currentParentId) break;
+          try {
+            const p = await databases.getDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, currentParentId) as any;
+            if (p.is_active) {
+              const pWallet = await appwriteService.db.getWallet(p.$id) as any as Wallet;
+              
+              await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.wallets!, (pWallet as any).$id, {
+                balance: (pWallet.balance || 0) + 0.5,
+                total_earned: (pWallet.total_earned || 0) + 0.5,
+                level_income: (pWallet.level_income || 0) + 0.5
+              });
 
-      // 5. Global AutoPool Filling Logic
-      await appwriteService.db.processPoolFilling(userId);
+              // Log Level Commission Transaction
+              await databases.createDocument(
+                APPWRITE_CONFIG.databaseId!,
+                APPWRITE_CONFIG.collections.transactions!,
+                ID.unique(),
+                {
+                  user_id: p.$id,
+                  from_user_id: userId,
+                  income_level: level,
+                  type: 'level',
+                  amount: 0.5,
+                  status: 'completed',
+                  created_at: new Date().toISOString()
+                }
+              );
+            }
+            currentParentId = p.matrix_parent_id;
+          } catch (e) {
+            console.error(`Level ${level} commission error:`, e);
+            break;
+          }
+        }
+      } catch (e) {
+        console.error("Level commission distribution error:", e);
+      }
     },
 
-    processPoolFilling: async (newUserId: string) => {
+    processPoolFilling: async (enteringUserId: string, poolNum: number) => {
       // Find the oldest active pool that needs filling
       // For Pool 1: Needs 4 members
       // For Pool 2-10: Needs 6 members
       
-      const findAndFill = async (poolNum: number) => {
+      const findAndFill = async (pNum: number, eUserId: string) => {
         try {
           const activePools = await databases.listDocuments(
             APPWRITE_CONFIG.databaseId!,
             APPWRITE_CONFIG.collections.pools!,
             [
-              Query.equal('pool_number', poolNum),
+              Query.equal('pool_number', pNum),
               Query.equal('status', 'active'),
+              Query.notEqual('user_id', eUserId), // Cannot fill own pool
               Query.orderAsc('created_at'),
               Query.limit(1)
             ]
@@ -505,7 +758,7 @@ export const appwriteService = {
           if (activePools.total > 0) {
             const poolToFill = activePools.documents[0] as any;
             const newCount = (poolToFill.members_count || 0) + 1;
-            const required = poolNum === 1 ? 4 : 6;
+            const required = pNum === 1 ? 4 : 6;
 
             if (newCount >= required) {
               // Pool Completed!
@@ -519,7 +772,7 @@ export const appwriteService = {
               const userId = poolToFill.user_id;
               const userWallet = await appwriteService.db.getWallet(userId) as any;
               
-              if (poolNum === 1) {
+              if (pNum === 1) {
                 // $10 Wallet, $10 Rebirth, $20 Upgrade
                 await databases.updateDocument(
                   APPWRITE_CONFIG.databaseId!,
@@ -527,7 +780,22 @@ export const appwriteService = {
                   userWallet.$id,
                   { 
                     balance: (userWallet.balance || 0) + 10,
-                    total_earned: (userWallet.total_earned || 0) + 10
+                    total_earned: (userWallet.total_earned || 0) + 10,
+                    pool_roi_earned: (userWallet.pool_roi_earned || 0) + 10
+                  }
+                );
+
+                // Log Pool Income Transaction
+                await databases.createDocument(
+                  APPWRITE_CONFIG.databaseId!,
+                  APPWRITE_CONFIG.collections.transactions!,
+                  ID.unique(),
+                  {
+                    user_id: userId,
+                    type: 'pool',
+                    amount: 10,
+                    status: 'completed',
+                    created_at: new Date().toISOString()
                   }
                 );
 
@@ -545,6 +813,9 @@ export const appwriteService = {
                   }
                 );
 
+                // Rebirth also fills someone else's pool
+                await findAndFill(1, userId);
+
                 // Upgrade to Pool 2
                 await databases.createDocument(
                   APPWRITE_CONFIG.databaseId!,
@@ -560,11 +831,11 @@ export const appwriteService = {
                 );
                 
                 // Chain reaction: Fill Pool 2
-                await findAndFill(2);
+                await findAndFill(2, userId);
               } 
-              else if (poolNum >= 2 && poolNum <= 9) {
+              else if (pNum >= 2 && pNum <= 9) {
                 // 40% Upgrade, 50% Wallet, 10% Global
-                const entryValue = poolNum === 2 ? 20 : Math.pow(2.4, poolNum - 2) * 20;
+                const entryValue = pNum === 2 ? 20 : Math.pow(2.4, pNum - 2) * 20;
                 const poolFund = entryValue * 6;
                 const walletAmount = poolFund * 0.5;
 
@@ -574,7 +845,22 @@ export const appwriteService = {
                   userWallet.$id,
                   { 
                     balance: (userWallet.balance || 0) + walletAmount,
-                    total_earned: (userWallet.total_earned || 0) + walletAmount
+                    total_earned: (userWallet.total_earned || 0) + walletAmount,
+                    pool_roi_earned: (userWallet.pool_roi_earned || 0) + walletAmount
+                  }
+                );
+
+                // Log Pool Income Transaction
+                await databases.createDocument(
+                  APPWRITE_CONFIG.databaseId!,
+                  APPWRITE_CONFIG.collections.transactions!,
+                  ID.unique(),
+                  {
+                    user_id: userId,
+                    type: 'pool',
+                    amount: walletAmount,
+                    status: 'completed',
+                    created_at: new Date().toISOString()
                   }
                 );
 
@@ -585,15 +871,15 @@ export const appwriteService = {
                   ID.unique(),
                   {
                     user_id: userId,
-                    pool_number: poolNum + 1,
+                    pool_number: pNum + 1,
                     status: 'active',
                     members_count: 0,
                     created_at: new Date().toISOString()
                   }
                 );
-                await findAndFill(poolNum + 1);
+                await findAndFill(pNum + 1, userId);
               }
-              else if (poolNum === 10) {
+              else if (pNum === 10) {
                 // 90% Wallet, 10% Global
                 const entryValue = Math.pow(2.4, 8) * 20;
                 const poolFund = entryValue * 6;
@@ -605,7 +891,22 @@ export const appwriteService = {
                   userWallet.$id,
                   { 
                     balance: (userWallet.balance || 0) + walletAmount,
-                    total_earned: (userWallet.total_earned || 0) + walletAmount
+                    total_earned: (userWallet.total_earned || 0) + walletAmount,
+                    pool_roi_earned: (userWallet.pool_roi_earned || 0) + walletAmount
+                  }
+                );
+
+                // Log Pool Income Transaction
+                await databases.createDocument(
+                  APPWRITE_CONFIG.databaseId!,
+                  APPWRITE_CONFIG.collections.transactions!,
+                  ID.unique(),
+                  {
+                    user_id: userId,
+                    type: 'pool',
+                    amount: walletAmount,
+                    status: 'completed',
+                    created_at: new Date().toISOString()
                   }
                 );
               }
@@ -619,12 +920,12 @@ export const appwriteService = {
             }
           }
         } catch (e) {
-          console.error(`Pool filling error (Pool ${poolNum}):`, e);
+          console.error(`Pool filling error (Pool ${pNum}):`, e);
         }
       };
 
-      // Start by filling Pool 1
-      await findAndFill(1);
+      // When a user enters a pool, they fill the oldest active pool of that same number
+      await findAndFill(poolNum, enteringUserId);
     },
 
     addTask: async (task: any) => {
@@ -698,10 +999,16 @@ export const appwriteService = {
       const response = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.users!,
-        [Query.or([
-          Query.equal('sponsor_id', userId),
-          Query.equal('matrix_parent_id', userId)
-        ])]
+        [Query.equal('matrix_parent_id', userId)]
+      );
+      return response.documents.map(doc => ({ ...doc, id: doc.$id }));
+    },
+
+    getDirectReferrals: async (userId: string) => {
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.users!,
+        [Query.equal('sponsor_id', userId)]
       );
       return response.documents.map(doc => ({ ...doc, id: doc.$id }));
     },
@@ -720,6 +1027,15 @@ export const appwriteService = {
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.transactions!,
         [Query.equal('user_id', userId), Query.orderDesc('created_at')]
+      );
+      return response.documents.map(doc => ({ ...doc, id: doc.$id }));
+    },
+
+    getAllTransactions: async (limit = 20) => {
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.transactions!,
+        [Query.orderDesc('created_at'), Query.limit(limit)]
       );
       return response.documents.map(doc => ({ ...doc, id: doc.$id }));
     }

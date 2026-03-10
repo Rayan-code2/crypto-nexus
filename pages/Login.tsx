@@ -100,9 +100,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, onDemoMode }) => {
                 <div className="relative">
                   <input 
                     type="text" 
+                    required
                     value={sponsorId}
                     onChange={(e) => setSponsorId(e.target.value)}
-                    placeholder="Optional Sponsor ID"
+                    placeholder="Enter Sponsor ID"
                     className="w-full bg-slate-900/80 border border-white/5 rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary/40 transition-all text-white placeholder:text-slate-600 font-medium"
                   />
                 </div>

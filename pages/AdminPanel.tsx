@@ -43,11 +43,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
   const [processing, setProcessing] = useState<string | null>(null);
   const [giftAmount, setGiftAmount] = useState<string>('');
   const [giftUserId, setGiftUserId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteChecked, setDeleteChecked] = useState(false);
+  const [purgeConfirmText, setPurgeConfirmText] = useState('');
+  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [userOffset, setUserOffset] = useState(0);
+  const [exOffset, setExOffset] = useState(0);
+  const PAGE_SIZE = 50;
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const userData = await mockApi.db.getAllUsers();
+      setUserOffset(0);
+      setExOffset(0);
+      const userData = await mockApi.db.getAllUsers(PAGE_SIZE, 0);
       setUsers(userData as any);
 
       const exData = await mockApi.db.getExchangeRequests();
@@ -55,6 +64,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
 
       const taskData = await mockApi.db.getTasks();
       setTasks(taskData as any);
+
+      // Fetch global transactions for activity log
+      try {
+        const txData = await mockApi.db.getAllTransactions(20);
+        setTransactions(txData as any);
+      } catch (txErr) {
+        console.error("Failed to fetch transactions", txErr);
+      }
 
       const settings = await mockApi.db.getSettings();
       if (settings) {
@@ -190,12 +207,60 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
     }
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!deleteChecked) return;
+    try {
+      await mockApi.db.deleteUser(userId);
+      showStatus("Agent Data Purged Successfully");
+      setDeleteConfirmId(null);
+      setDeleteChecked(false);
+      fetchData();
+    } catch (err: any) {
+      showStatus(err.message || "Failed to delete user", "error");
+    }
+  };
+
+  const handlePurgeAllData = async () => {
+    if (purgeConfirmText !== 'PURGE') return;
+    setLoading(true);
+    try {
+      await mockApi.db.purgeAllData();
+      showStatus("System Reset Successfully - All Data Purged");
+      setShowPurgeModal(false);
+      setPurgeConfirmText('');
+      fetchData();
+    } catch (err: any) {
+      showStatus(err.message || "Failed to purge data", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoadMoreUsers = async () => {
+    const nextOffset = userOffset + PAGE_SIZE;
+    try {
+      const moreUsers = await mockApi.db.getAllUsers(PAGE_SIZE, nextOffset);
+      if (moreUsers.length > 0) {
+        setUsers(prev => [...prev, ...moreUsers as any]);
+        setUserOffset(nextOffset);
+      } else {
+        showStatus("No more agents to load", "error");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleApproveExchange = async (requestId: string, status: 'approved' | 'rejected') => {
     if (processing) return;
     setProcessing(requestId);
     try {
-      const request = exchangeRequests.find(r => r.id === requestId);
-      if (!request || request.status !== 'pending') {
+      // Re-fetch the latest status from DB to avoid stale state issues
+      const latestRequest = await mockApi.db.getExchangeRequest(requestId);
+      
+      if (!latestRequest || latestRequest.status !== 'pending') {
+        showStatus("Request already processed", "error");
+        await fetchData();
         setProcessing(null);
         return;
       }
@@ -204,23 +269,47 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
       await mockApi.db.updateExchangeRequest(requestId, { status });
 
       // If it's a deposit or buy and approved, add balance to user and activate account
-      if ((request.type === 'deposit' || request.type === 'buy') && status === 'approved') {
-        await mockApi.db.activateUser(request.user_id, request.amount);
+      if ((latestRequest.type === 'deposit' || latestRequest.type === 'buy') && status === 'approved') {
+        try {
+          await mockApi.db.activateUser(latestRequest.user_id, latestRequest.amount);
+        } catch (activateErr: any) {
+          console.error("Activation failed after status update:", activateErr);
+          showStatus(`Status updated, but activation failed: ${activateErr.message}`, "error");
+          await fetchData();
+          setProcessing(null);
+          return;
+        }
       }
 
       // If it's a withdrawal or sell and rejected, refund the balance
-      if ((request.type === 'withdraw' || request.type === 'sell') && status === 'rejected') {
-        const wallet = await mockApi.db.getWallet(request.user_id);
+      if ((latestRequest.type === 'withdraw' || latestRequest.type === 'sell') && status === 'rejected') {
+        const wallet = await mockApi.db.getWallet(latestRequest.user_id);
         if (wallet) {
-          await mockApi.db.updateWallet(request.user_id, wallet.balance + request.amount);
+          await mockApi.db.updateWallet(latestRequest.user_id, wallet.balance + latestRequest.amount);
         }
       }
 
       showStatus(`Order ${status.toUpperCase()}`);
       await fetchData();
-    } catch (e) {
+    } catch (e: any) {
       console.error("Approval error:", e);
-      showStatus("Update failed", "error");
+      showStatus(`Update failed: ${e.message || "Unknown error"}`, "error");
+      await fetchData();
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleManualActivate = async (userId: string) => {
+    if (processing) return;
+    setProcessing(userId);
+    try {
+      await mockApi.db.activateUser(userId, 10);
+      showStatus("User Activated Successfully");
+      await fetchData();
+    } catch (e: any) {
+      console.error("Manual activation error:", e);
+      showStatus(`Activation failed: ${e.message}`, "error");
     } finally {
       setProcessing(null);
     }
@@ -295,23 +384,58 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
           </div>
 
           <div className="glass rounded-[2.5rem] p-8 border-white/5">
-            <h3 className="text-xs font-black uppercase tracking-widest mb-6 border-b border-white/5 pb-4">Real-time Activity Log</h3>
-            <div className="space-y-4">
+            <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+              <h3 className="text-xs font-black uppercase tracking-widest">Real-time Activity Log</h3>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Live Feed</span>
+              </div>
+            </div>
+            <div className="space-y-3">
                {transactions.length === 0 ? (
                  <p className="text-slate-600 italic text-center py-10 font-bold uppercase tracking-widest text-[10px]">No recent data stream...</p>
                ) : (
-                 transactions.map(tx => (
-                   <div key={tx.id} className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest bg-white/5 p-4 rounded-2xl">
-                     <div className="flex gap-4 items-center">
-                        <span className="text-secondary">TXID: {tx.id.slice(0,8)}</span>
-                        <span className="text-slate-500">{tx.type} protocol</span>
+                 transactions.map(tx => {
+                   const txUser = users.find(u => u.id === tx.user_id);
+                   const timeStr = new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                   
+                   return (
+                     <div key={tx.id} className="flex flex-col md:flex-row justify-between md:items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/[0.08] transition-all group">
+                       <div className="flex flex-col gap-1">
+                         <div className="flex items-center gap-3">
+                           <span className="text-secondary font-black text-[11px]">TXID: {tx.id.slice(0,8)}</span>
+                           <span className="text-slate-500 text-[9px] font-bold">{timeStr}</span>
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <span className="text-white text-[10px] font-black uppercase tracking-tight">
+                             {txUser?.email || tx.user_id.slice(0, 12) + '...'}
+                           </span>
+                           <span className="text-slate-500 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-white/5 rounded-md border border-white/5">
+                             {tx.type} protocol
+                           </span>
+                           {tx.income_level && (
+                             <span className="text-primary text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-primary/10 rounded-md border border-primary/20">
+                               Level {tx.income_level}
+                             </span>
+                           )}
+                         </div>
+                       </div>
+                       <div className="flex justify-between md:justify-end items-center gap-6">
+                         <div className="text-right">
+                           <p className="text-primary font-black text-sm">+$ {tx.amount.toFixed(2)} USDT</p>
+                           <p className="text-[8px] text-slate-500 font-black uppercase tracking-[0.2em]">Volume Sync</p>
+                         </div>
+                         <div className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
+                           tx.status === 'completed' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 
+                           tx.status === 'pending' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 
+                           'bg-red-500/10 border-red-500/20 text-red-500'
+                         }`}>
+                           {tx.status}
+                         </div>
+                       </div>
                      </div>
-                     <div className="flex gap-6 items-center">
-                        <span className="text-primary">+${tx.amount} USDT</span>
-                        <span className="text-green-500">{tx.status}</span>
-                     </div>
-                   </div>
-                 ))
+                   );
+                 })
                )}
             </div>
           </div>
@@ -395,6 +519,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
                         >
                           Reset Pass
                         </button>
+                        {!u.is_active && (
+                          <button 
+                            onClick={() => handleManualActivate(u.id)}
+                            className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-darker transition-all"
+                          >
+                            Activate
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleToggleBlock(u.id, u.is_blocked)}
                           className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${
@@ -402,6 +534,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
                           }`}
                         >
                           {u.is_blocked ? 'Restore' : 'Suspend'}
+                        </button>
+                        <button 
+                          onClick={() => setDeleteConfirmId(u.id)}
+                          className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white transition-all"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>
@@ -469,10 +607,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
                       >
                         {u.is_blocked ? '✓' : '✕'}
                       </button>
+                      <button 
+                        onClick={() => setDeleteConfirmId(u.id)}
+                        className="p-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+            
+            <div className="p-6 border-t border-white/5 flex justify-center">
+              <button 
+                onClick={handleLoadMoreUsers}
+                className="px-8 py-3 rounded-2xl bg-white/5 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
+              >
+                Load More Agents
+              </button>
             </div>
           </div>
         </div>
@@ -521,6 +676,53 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-darker/90 backdrop-blur-xl animate-in fade-in">
+          <div className="glass w-full max-w-md p-8 rounded-[3rem] border-red-500/20 shadow-2xl shadow-red-500/10">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-red-500/20 rounded-3xl mx-auto flex items-center justify-center text-3xl mb-4">⚠️</div>
+              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Purge Agent Data?</h3>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-2">This action is irreversible. All wallet data and history will be lost for Node: {deleteConfirmId.slice(0, 12)}...</p>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+                <input 
+                  type="checkbox" 
+                  id="confirm-delete"
+                  checked={deleteChecked}
+                  onChange={(e) => setDeleteChecked(e.target.checked)}
+                  className="w-5 h-5 rounded border-white/10 bg-slate-900 text-red-500 focus:ring-red-500"
+                />
+                <label htmlFor="confirm-delete" className="text-[10px] font-bold text-slate-400 uppercase cursor-pointer select-none">
+                  I understand that this data cannot be recovered.
+                </label>
+              </div>
+              
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => {
+                    setDeleteConfirmId(null);
+                    setDeleteChecked(false);
+                  }}
+                  className="flex-1 py-4 bg-white/5 text-slate-400 font-black rounded-2xl uppercase text-[11px] tracking-widest hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleDeleteUser(deleteConfirmId)}
+                  disabled={!deleteChecked}
+                  className="flex-2 py-4 bg-red-500 disabled:opacity-30 text-white font-black rounded-2xl uppercase text-[11px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-red-500/20"
+                >
+                  Purge Data
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -788,8 +990,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
         <div className="space-y-4 animate-in fade-in">
           <div className="glass rounded-[2.5rem] overflow-hidden border-white/5">
             <div className="p-8 border-b border-white/5 flex justify-between items-center">
-              <h3 className="text-xl font-black uppercase italic">Protocol Transfers</h3>
+              <div className="flex flex-col">
+                <h3 className="text-xl font-black uppercase italic">Protocol Transfers</h3>
+                <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest mt-1">Direct Deposit & Withdrawal Stream</p>
+              </div>
               <div className="flex gap-4">
+                <button 
+                  onClick={fetchData}
+                  className="p-3 rounded-xl bg-white/5 text-primary hover:bg-primary/10 transition-all border border-white/5"
+                  title="Refresh Stream"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Stream</span>
@@ -1233,10 +1445,77 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
                   </div>
                </div>
 
+               <div className="pt-10 border-t border-white/5 space-y-6">
+                  <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2.5rem] space-y-4">
+                     <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-red-500/20 rounded-2xl flex items-center justify-center text-2xl">☢️</div>
+                        <div>
+                           <h4 className="text-lg font-black text-red-500 uppercase italic">Danger Zone: System Reset</h4>
+                           <p className="text-[9px] text-red-500/60 font-black uppercase tracking-widest">Wipe all users, wallets, and transaction history</p>
+                        </div>
+                     </div>
+                     <p className="text-[10px] text-slate-500 font-bold leading-relaxed uppercase">
+                        This action will permanently delete all agent data, wallet balances, and transaction logs from the database. This is irreversible.
+                     </p>
+                     <button 
+                        onClick={() => setShowPurgeModal(true)}
+                        className="w-full py-4 bg-red-500 text-white font-black rounded-2xl uppercase tracking-[0.2em] shadow-lg shadow-red-500/20 hover:scale-[1.02] transition-all text-xs"
+                     >
+                        Purge All System Data
+                     </button>
+                  </div>
+               </div>
+
               <button onClick={handleUpdateRates} className="w-full py-5 bg-amber-500 text-darker font-black rounded-[2rem] uppercase tracking-[0.3em] shadow-2xl shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all">
                  Apply Global Updates
               </button>
            </div>
+        </div>
+      )}
+      {/* Purge Confirmation Modal */}
+      {showPurgeModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-darker/95 backdrop-blur-2xl animate-in fade-in">
+          <div className="glass w-full max-w-md p-10 rounded-[3.5rem] border-red-500/30 shadow-2xl shadow-red-500/20">
+            <div className="text-center mb-10">
+              <div className="w-20 h-20 bg-red-500/20 rounded-[2.5rem] mx-auto flex items-center justify-center text-4xl mb-6 animate-pulse">☢️</div>
+              <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Total System Wipe</h3>
+              <p className="text-red-500/60 text-[10px] font-black uppercase tracking-widest mt-3">All agent nodes and financial records will be destroyed.</p>
+              <p className="text-green-500/80 text-[9px] font-black uppercase tracking-widest mt-2">🛡️ Admin accounts are safe and will not be deleted.</p>
+              <p className="text-slate-500 text-[8px] font-bold uppercase mt-2 px-4">Note: Database documents will be cleared. Appwrite Auth users must be deleted manually from Appwrite Console if you want to reuse emails immediately.</p>
+            </div>
+            
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Type "PURGE" to confirm</label>
+                <input 
+                  type="text" 
+                  value={purgeConfirmText}
+                  onChange={(e) => setPurgeConfirmText(e.target.value.toUpperCase())}
+                  placeholder="PURGE"
+                  className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-xl font-black text-center text-red-500 outline-none ring-2 ring-red-500/20 focus:ring-red-500"
+                />
+              </div>
+              
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => {
+                    setShowPurgeModal(false);
+                    setPurgeConfirmText('');
+                  }}
+                  className="flex-1 py-5 bg-white/5 text-slate-400 font-black rounded-2xl uppercase text-[11px] tracking-widest hover:bg-white/10 transition-all"
+                >
+                  Abort
+                </button>
+                <button 
+                  onClick={handlePurgeAllData}
+                  disabled={purgeConfirmText !== 'PURGE' || loading}
+                  className="flex-2 py-5 bg-red-500 disabled:opacity-30 text-white font-black rounded-2xl uppercase text-[11px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-500/30"
+                >
+                  {loading ? 'Purging...' : 'Execute Wipe'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

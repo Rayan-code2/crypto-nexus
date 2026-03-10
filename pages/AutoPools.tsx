@@ -118,9 +118,14 @@ const AutoPools: React.FC<{ user: User }> = ({ user }) => {
                   <h3 className="text-xl font-black italic uppercase text-white">{name}</h3>
                   <div className="flex items-center gap-2">
                     <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Tier {poolNum}</p>
-                    {entries.filter(p => p.status === 'completed').length > 0 && (
+                    {completedEntries.length > 0 && (
                       <span className="text-[7px] bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter">
-                        {entries.filter(p => p.status === 'completed').length} Cycle(s) Done
+                        {completedEntries.length} Cycle(s) Done
+                      </span>
+                    )}
+                    {activeEntry && completedEntries.length > 0 && (
+                      <span className="text-[7px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter">
+                        Re-entry Active
                       </span>
                     )}
                   </div>
@@ -145,7 +150,9 @@ const AutoPools: React.FC<{ user: User }> = ({ user }) => {
 
                 <div>
                   <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2">
-                    <span className="text-slate-500">Global Filling</span>
+                    <span className="text-slate-500">
+                      {entries.filter(p => p.status === 'completed').length > 0 ? `Cycle ${entries.filter(p => p.status === 'completed').length + 1} Filling` : 'Global Filling'}
+                    </span>
                     <span className="text-white">
                       {activeEntry ? activeEntry.members_count : isCompleted ? requiredMembers : 0} / {requiredMembers} Slots
                     </span>

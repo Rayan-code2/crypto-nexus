@@ -155,11 +155,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
             </div>
 
             <div className="relative z-10 my-4">
-              <div className="flex justify-between items-end mb-1">
+              <div className="flex justify-between items-center mb-1">
                 <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Live Vault Balance</p>
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Growth Active</span>
+                <div className="flex items-center gap-3">
+                  {wallet.hold_balance > 0 && (
+                    <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                      <span className="text-[7px] font-black text-amber-500 uppercase tracking-widest">Held for Pool: ${wallet.hold_balance}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Growth Active</span>
+                  </div>
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
@@ -363,7 +370,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Progress to Pool 1</p>
-                    <p className="text-xs font-black text-white">{user.direct_count || 0} / 3 Directs</p>
+                    <div className="text-right">
+                      <p className="text-xs font-black text-white">{user.direct_count || 0} / 3 Directs</p>
+                      <p className="text-[9px] font-black text-amber-500 uppercase mt-1">Pool Fund: ${wallet.hold_balance || 0} / $10</p>
+                    </div>
                   </div>
                   <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
                     <div 

@@ -31,6 +31,7 @@ export const mockApi = {
         is_active: true,
         is_qualified: true,
         direct_count: 5,
+        children_count: 0,
         created_at: new Date().toISOString()
       };
       
@@ -77,6 +78,7 @@ export const mockApi = {
           pool_roi_earned: 4.20,
           direct_income: 25.00,
           level_income: 15.50,
+          hold_balance: 5.00,
           total_withdrawn: 0,
           last_roi_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
           last_pool_roi_at: new Date(Date.now() - 7200000).toISOString() // 2 hours ago
@@ -88,13 +90,17 @@ export const mockApi = {
         const demoTxs = [
           { id: 'tx1', user_id: userId, type: 'roi', amount: 0.25, status: 'completed', created_at: new Date(Date.now() - 86400000).toISOString() },
           { id: 'tx2', user_id: userId, type: 'direct', amount: 5.00, status: 'completed', created_at: new Date(Date.now() - 172800000).toISOString() },
-          { id: 'tx3', user_id: userId, type: 'level', amount: 0.50, status: 'completed', created_at: new Date(Date.now() - 259200000).toISOString() },
+          { id: 'tx3', user_id: userId, type: 'level', income_level: 1, amount: 0.50, status: 'completed', created_at: new Date(Date.now() - 259200000).toISOString() },
+          { id: 'tx4', user_id: userId, type: 'level', income_level: 2, amount: 0.50, status: 'completed', created_at: new Date(Date.now() - 345600000).toISOString() },
+          { id: 'tx5', user_id: userId, type: 'level', income_level: 3, amount: 0.50, status: 'completed', created_at: new Date(Date.now() - 432000000).toISOString() },
+          { id: 'tx6', user_id: userId, type: 'pool_payout', amount: 10.00, status: 'completed', created_at: new Date(Date.now() - 518400000).toISOString() },
         ];
         setStorage('transactions', [...txs, ...demoTxs]);
       } else {
         // Ensure new fields exist for existing demo wallets
         if (wallet.direct_income === undefined) wallet.direct_income = 25.00;
         if (wallet.level_income === undefined) wallet.level_income = 15.50;
+        if (wallet.hold_balance === undefined) wallet.hold_balance = 5.00;
       }
       return wallet;
     },
@@ -156,6 +162,12 @@ export const mockApi = {
       if (isAppwriteConfigured()) return await appwriteService.db.getTransactions(userId);
       const txs = getStorage('transactions');
       return txs.filter((tx: any) => tx.user_id === userId).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    },
+
+    getAllTransactions: async (limit = 20) => {
+      if (isAppwriteConfigured()) return await appwriteService.db.getAllTransactions(limit);
+      const txs = getStorage('transactions');
+      return txs.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, limit);
     },
 
     distributeROI: async (userId: string) => {
@@ -241,8 +253,16 @@ export const mockApi = {
       if (isAppwriteConfigured()) return await appwriteService.db.getMatrixDownline(userId);
 
       const users = getStorage('users');
-      // Find users where this user is the sponsor or matrix parent
-      return users.filter((u: any) => u.matrix_parent_id === userId || u.sponsor_id === userId);
+      // Find users where this user is the matrix parent
+      return users.filter((u: any) => u.matrix_parent_id === userId);
+    },
+
+    getDirectReferrals: async (userId: string) => {
+      if (isAppwriteConfigured()) return await appwriteService.db.getDirectReferrals(userId);
+
+      const users = getStorage('users');
+      // Find users where this user is the sponsor
+      return users.filter((u: any) => u.sponsor_id === userId);
     },
     
     getTasks: async () => {
@@ -270,7 +290,14 @@ export const mockApi = {
       if (isAppwriteConfigured()) return await appwriteService.db.getExchangeRequests(userId);
 
       const reqs = getStorage('exchange_requests');
-      return userId ? reqs.filter((r: any) => r.user_id === userId) : reqs;
+      const filtered = userId ? reqs.filter((r: any) => r.user_id === userId) : reqs;
+      return filtered.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    },
+
+    getExchangeRequest: async (requestId: string) => {
+      if (isAppwriteConfigured()) return await appwriteService.db.getExchangeRequest(requestId);
+      const reqs = getStorage('exchange_requests');
+      return reqs.find((r: any) => r.id === requestId);
     },
 
     createExchangeRequest: async (data: any) => {
@@ -296,12 +323,15 @@ export const mockApi = {
     },
 
     // Admin Methods
-    getAllUsers: async () => {
-      if (isAppwriteConfigured()) return await appwriteService.db.getAllUsers();
+    getAllUsers: async (limit = 50, offset = 0) => {
+      if (isAppwriteConfigured()) return await appwriteService.db.getAllUsers(limit, offset);
 
       const users = getStorage('users');
       const wallets = getStorage('wallets');
-      return users.map((u: any) => ({ ...u, wallets: [wallets.find((w: any) => w.user_id === u.id)] }));
+      const sorted = users.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const paginated = sorted.slice(offset, offset + limit);
+      
+      return paginated.map((u: any) => ({ ...u, wallets: [wallets.find((w: any) => w.user_id === u.id)] }));
     },
 
     updateUser: async (id: string, data: any) => {
@@ -316,6 +346,47 @@ export const mockApi = {
 
       const wallets = getStorage('wallets');
       setStorage('wallets', wallets.map((w: any) => w.user_id === userId ? { ...w, balance: amount } : w));
+    },
+
+    deleteUser: async (userId: string) => {
+      if (isAppwriteConfigured()) return await appwriteService.db.deleteUser(userId);
+
+      const users = getStorage('users');
+      setStorage('users', users.filter((u: any) => u.id !== userId));
+      
+      const wallets = getStorage('wallets');
+      setStorage('wallets', wallets.filter((w: any) => w.user_id !== userId));
+      
+      const txs = getStorage('transactions');
+      setStorage('transactions', txs.filter((tx: any) => tx.user_id !== userId));
+      
+      const reqs = getStorage('exchange_requests');
+      setStorage('exchange_requests', reqs.filter((r: any) => r.user_id !== userId));
+
+      const pools = getStorage('pools');
+      setStorage('pools', pools.filter((p: any) => p.user_id !== userId));
+
+      const subs = getStorage('task_submissions');
+      setStorage('task_submissions', subs.filter((s: any) => s.user_id !== userId));
+    },
+
+    purgeAllData: async () => {
+      if (isAppwriteConfigured()) return await appwriteService.db.purgeAllData();
+
+      const users = getStorage('users');
+      const admins = users.filter((u: any) => u.role === 'admin');
+      const adminIds = admins.map((a: any) => a.id);
+
+      setStorage('users', admins);
+      
+      const wallets = getStorage('wallets');
+      setStorage('wallets', wallets.filter((w: any) => adminIds.includes(w.user_id)));
+      
+      setStorage('transactions', []);
+      setStorage('exchange_requests', []);
+      setStorage('tasks', []);
+      setStorage('task_submissions', []);
+      setStorage('pools', []);
     },
 
     activateUser: async (userId: string, amount: number) => {
@@ -402,11 +473,27 @@ export const mockApi = {
                 };
                 setStorage('pools', [...pools, newPoolEntry]);
                 sponsor.is_qualified = true;
+                
+                // IMPORTANT: Only now we trigger filling for the global pool
+                // because a new person has actually entered Pool 1
+                await mockApi.db.processPoolFilling(sponsor.id, 1);
               }
             }
           } else {
             sponsorWallet.balance += 5;
             sponsorWallet.total_earned += 5;
+            
+            const txs = getStorage('transactions');
+            txs.push({
+              id: 'tx_direct_' + Date.now() + Math.random(),
+              user_id: sponsor.id,
+              from_user_id: userId,
+              type: 'direct',
+              amount: 5,
+              status: 'completed',
+              created_at: new Date().toISOString()
+            });
+            setStorage('transactions', txs);
           }
 
           const wallets = getStorage('wallets');
@@ -426,6 +513,19 @@ export const mockApi = {
             pWallet.balance += 0.5;
             pWallet.total_earned += 0.5;
             
+            const txs = getStorage('transactions');
+            txs.push({
+              id: 'tx_level_' + level + '_' + Date.now() + Math.random(),
+              user_id: p.id,
+              from_user_id: userId,
+              income_level: level,
+              type: 'level',
+              amount: 0.5,
+              status: 'completed',
+              created_at: new Date().toISOString()
+            });
+            setStorage('transactions', txs);
+            
             const wallets = getStorage('wallets');
             setStorage('wallets', wallets.map((w: any) => w.user_id === p.id ? pWallet : w));
           }
@@ -435,12 +535,10 @@ export const mockApi = {
         }
       }
 
-      // 5. Global AutoPool Filling Logic
-      // When a new user activates, they count towards the current open pool slots
-      await mockApi.db.processPoolFilling(userId);
+      setStorage('users', users);
     },
 
-    processPoolFilling: async (newUserId: string) => {
+    processPoolFilling: async (enteringUserId: string, poolNum: number) => {
       const pools = getStorage('pools');
       const users = getStorage('users');
       const wallets = getStorage('wallets');
@@ -488,6 +586,8 @@ export const mockApi = {
               created_at: new Date().toISOString()
             };
             pools.push(rebirthEntry);
+            // Rebirth also fills someone else's pool
+            await findAndFillPool(1, userId);
 
             // Upgrade to Pool 2
             const pool2Entry = {
@@ -501,7 +601,7 @@ export const mockApi = {
             pools.push(pool2Entry);
             
             // Trigger filling for Pool 2
-            await findAndFillPool(2);
+            await findAndFillPool(2, userId);
           } 
           else if (poolToFill.pool_number >= 2 && poolToFill.pool_number <= 9) {
             // Pool 2-9 Logic: 40% Upgrade, 50% Wallet, 10% Global Fund
@@ -533,7 +633,7 @@ export const mockApi = {
               created_at: new Date().toISOString()
             };
             pools.push(nextPoolEntry);
-            await findAndFillPool(poolToFill.pool_number + 1);
+            await findAndFillPool(poolToFill.pool_number + 1, userId);
           }
           else if (poolToFill.pool_number === 10) {
             // Pool 10 Logic: 90% Wallet, 10% Global Fund
@@ -556,15 +656,20 @@ export const mockApi = {
         }
       };
 
-      const findAndFillPool = async (poolNum: number) => {
-        const targetPool = pools.find((p: any) => p.pool_number === poolNum && p.status === 'active');
+      const findAndFillPool = async (poolNum: number, enteringUserId: string) => {
+        // Find the oldest active pool for this number that DOES NOT belong to the entering user
+        const targetPool = pools.find((p: any) => 
+          p.pool_number === poolNum && 
+          p.status === 'active' && 
+          p.user_id !== enteringUserId
+        );
         if (targetPool) {
           await processCompletion(targetPool);
         }
       };
 
-      // When a new user joins, they fill Pool 1
-      await findAndFillPool(1);
+      // When a user enters a pool, they fill the oldest active pool of that same number
+      await findAndFillPool(poolNum, enteringUserId);
 
       setStorage('pools', pools);
       setStorage('wallets', wallets);

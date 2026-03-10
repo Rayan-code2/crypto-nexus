@@ -32,6 +32,7 @@ const MatrixNode: React.FC<MatrixNodeProps> = ({ user, level }) => {
 
 const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
   const [downline, setDownline] = useState<any[]>([]);
+  const [directs, setDirects] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [levelStats, setLevelStats] = useState<{ [key: number]: number }>({});
@@ -39,14 +40,16 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
   useEffect(() => {
     const fetchDownline = async () => {
       try {
-        const [directData, allUsersData] = await Promise.all([
+        const [matrixData, directData, allUsersData] = await Promise.all([
           mockApi.db.getMatrixDownline(user.id),
+          mockApi.db.getDirectReferrals(user.id),
           mockApi.db.getAllUsers()
         ]);
-        setDownline(directData);
+        setDownline(matrixData);
+        setDirects(directData);
         setAllUsers(allUsersData);
         
-        // Calculate level stats
+        // Calculate level stats (Matrix-based)
         const stats: { [key: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
         const parentToChildren: { [key: string]: string[] } = {};
         
@@ -80,15 +83,15 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
     fetchDownline();
   }, [user.id]);
 
-  // Simple logic to assign left/right for level 1
-  const leftNode = downline[0] || null;
-  const rightNode = downline[1] || null;
+  // Matrix Tree visualization uses matrix_parent_id (downline)
+  const leftNode = downline.find(u => u.matrix_position === 'left') || downline[0] || null;
+  const rightNode = downline.find(u => u.matrix_position === 'right') || (downline.length > 1 ? downline[1] : null);
 
   return (
     <div className="flex flex-col items-center space-y-12 animate-in slide-in-from-bottom duration-500">
       <div className="text-center max-w-xl">
-        <h2 className="text-2xl font-bold mb-2 text-primary">Binary Matrix Tree</h2>
-        <p className="text-slate-400 text-sm">Visualizing your 2x2 forced matrix structure. Direct referrals are automatically placed left-to-right to fill gaps.</p>
+        <h2 className="text-2xl font-bold mb-2 text-primary italic uppercase tracking-tighter">Binary Matrix Tree</h2>
+        <p className="text-slate-400 text-xs font-medium uppercase tracking-widest">Visualizing your 2×2 forced matrix structure. Direct referrals are automatically placed left-to-right to fill gaps.</p>
       </div>
 
       <div className="relative w-full max-w-4xl overflow-x-auto pb-12 custom-scrollbar flex flex-col items-center">
@@ -152,20 +155,20 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
           <div className="glass p-4 rounded-xl text-center">
-            <p className="text-xs text-slate-500">Total Team</p>
-            <p className="text-xl font-bold">{Object.values(levelStats).reduce((a: number, b: number) => a + b, 0)}</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Team</p>
+            <p className="text-xl font-black text-white">{Object.values(levelStats).reduce((a: number, b: number) => a + b, 0)}</p>
           </div>
           <div className="glass p-4 rounded-xl text-center">
-            <p className="text-xs text-slate-500">Active Nodes</p>
-            <p className="text-xl font-bold">{downline.filter(u => !u.is_blocked).length}</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Active Nodes</p>
+            <p className="text-xl font-black text-white">{directs.filter(u => u.is_active).length}</p>
           </div>
           <div className="glass p-4 rounded-xl text-center">
-            <p className="text-xs text-slate-500">Matrix Level</p>
-            <p className="text-xl font-bold text-amber-500">1</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Matrix Level</p>
+            <p className="text-xl font-black text-amber-500 italic">1</p>
           </div>
           <div className="glass p-4 rounded-xl text-center">
-            <p className="text-xs text-slate-500">Direct Bonus</p>
-            <p className="text-xl font-bold text-primary">${downline.length * 5}</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Direct Bonus</p>
+            <p className="text-xl font-black text-primary italic">${directs.filter(u => u.is_active).length * 5}</p>
           </div>
       </div>
 

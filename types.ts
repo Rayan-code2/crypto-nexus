@@ -39,7 +39,9 @@ export type TransactionStatus = 'pending' | 'completed' | 'failed';
 export interface Transaction {
   id: string;
   user_id: string;
-  type: TransactionType;
+  from_user_id?: string; // Source user for direct/level income
+  income_level?: number; // Level from which income was received (1-6)
+  type: TransactionType | 'pool_payout';
   amount: number;
   status: TransactionStatus;
   created_at: string;
