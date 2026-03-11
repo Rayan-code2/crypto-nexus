@@ -161,7 +161,7 @@ export const appwriteService = {
       return response.documents.map(doc => ({ ...doc, id: doc.$id }));
     },
 
-    submitTask: async (userId: string, taskId: string, proof: string) => {
+    submitTask: async (userId: string, taskId: string) => {
       await databases.createDocument(
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.submissions!,
@@ -170,32 +170,8 @@ export const appwriteService = {
           user_id: userId,
           task_id: taskId,
           status: 'pending',
-          proof: proof
+          created_at: new Date().toISOString()
         }
-      );
-    },
-
-    getTaskSubmissions: async (userId?: string) => {
-      const queries = userId ? [Query.equal('user_id', userId)] : [];
-      queries.push(Query.orderDesc('$createdAt'));
-      queries.push(Query.limit(100));
-      
-      const response = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.submissions!,
-        queries
-      );
-      return response.documents.map(doc => ({ ...doc, id: doc.$id }));
-    },
-
-    approveTaskSubmission: async (submissionId: string, status: 'approved' | 'rejected') => {
-      // This is a placeholder for the logic. 
-      // In a real app, this would be a server-side function to handle wallet updates securely.
-      return await databases.updateDocument(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.submissions!,
-        submissionId,
-        { status }
       );
     },
 
@@ -473,7 +449,7 @@ export const appwriteService = {
         }
       }
 
-      // 2. AutoPool ROI (0.5% Daily on $10)
+      // 2. AutoPool ROI (1% Daily on $10)
       const poolsRes = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.pools!,
@@ -487,7 +463,7 @@ export const appwriteService = {
 
         if (diffHoursPool >= 24) {
           const days = Math.floor(diffHoursPool / 24);
-          const poolROI = 10 * 0.005 * days; // 0.5% of $10
+          const poolROI = 10 * 0.01 * days; // 1% of $10
 
           if (poolROI > 0) {
             updateData.balance = (updateData.balance || wallet.balance || 0) + poolROI;
@@ -1022,13 +998,7 @@ export const appwriteService = {
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.tasks!,
         ID.unique(),
-        { 
-          title: task.title,
-          description: task.description,
-          reward: task.reward,
-          link: task.link,
-          is_active: true 
-        }
+        { ...task, is_active: true, created_at: new Date().toISOString() }
       );
     },
 

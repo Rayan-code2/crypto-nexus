@@ -26,8 +26,6 @@ const sparkData = [
 const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavigate, onExchangerNav }) => {
   const [copied, setCopied] = useState(false);
   const [liveBalance, setLiveBalance] = useState(wallet.balance);
-  const [livePoolROI, setLivePoolROI] = useState(wallet.pool_roi_earned || 0);
-  const [liveWalletROI, setLiveWalletROI] = useState(wallet.wallet_roi_earned || 0);
   const [marqueeText, setMarqueeText] = useState('⚡ NODE ACTIVE: SYSTEM ONLINE | 💎 USDT/INR: ₹92.45 (+0.4%) | 🔥 NETWORK VOLUME: $4.2M | 🚀 NEW POOL 5 ENTRY FROM ID #8291');
   const isAdmin = user.role?.toLowerCase() === 'admin';
   
@@ -59,38 +57,34 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
   // Real-time Balance Growth Ticker (Dual ROI)
   React.useEffect(() => {
     const walletDailyRate = 0.002; // 0.20%
-    const poolDailyRate = 0.005; // 0.50% on $10
+    const poolDailyRate = 0.01; // 1% on $10
     
     const walletRatePerSec = walletDailyRate / 86400;
     const poolRatePerSec = poolDailyRate / 86400;
     
     const interval = setInterval(() => {
       const now = Date.now();
-      let walletAccrued = 0;
-      let poolAccrued = 0;
+      let totalAccrued = 0;
       
       // Wallet Accrual (Only if balance > 0)
       if (wallet.balance > 0) {
         const lastWalletROI = wallet.last_roi_at ? new Date(wallet.last_roi_at).getTime() : now;
         const walletSecs = (now - lastWalletROI) / 1000;
-        walletAccrued = wallet.balance * walletRatePerSec * walletSecs;
+        totalAccrued += wallet.balance * walletRatePerSec * walletSecs;
       }
       
-      // Pool Accrual (Only if user is in Pool 1 and it's active)
-      const pool1 = pools.find(p => p.pool_number === 1 && p.status === 'active');
-      if (pool1) {
-        const lastPoolROI = wallet.last_pool_roi_at ? new Date(wallet.last_pool_roi_at).getTime() : new Date(pool1.created_at).getTime();
+      // Pool Accrual (Only if user is qualified - meaning they are in Pool 1)
+      if (user.is_qualified) {
+        const lastPoolROI = wallet.last_pool_roi_at ? new Date(wallet.last_pool_roi_at).getTime() : now;
         const poolSecs = (now - lastPoolROI) / 1000;
-        poolAccrued = 10 * poolRatePerSec * poolSecs; // 0.5% of $10
+        totalAccrued += 10 * poolRatePerSec * poolSecs; // 1% of $10
       }
       
-      setLiveBalance(wallet.balance + walletAccrued + poolAccrued);
-      setLivePoolROI((wallet.pool_roi_earned || 0) + poolAccrued);
-      setLiveWalletROI((wallet.wallet_roi_earned || 0) + walletAccrued);
+      setLiveBalance(wallet.balance + totalAccrued);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [wallet.balance, wallet.last_roi_at, wallet.last_pool_roi_at, user.is_active, pools]);
+  }, [wallet.balance, wallet.last_roi_at, wallet.last_pool_roi_at, user.is_active]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
@@ -221,8 +215,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
           {/* MAIN STATS GRID - OPTIMIZED */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
             {[
-              { label: 'Wallet ROI', value: `$${liveWalletROI.toFixed(4)}`, trend: '0.20%', color: 'text-cyan-400', sparkColor: '#22d3ee' },
-              { label: 'Pool ROI', value: `$${livePoolROI.toFixed(4)}`, trend: '0.50%', color: 'text-amber-400', sparkColor: '#fbbf24' },
+              { label: 'Wallet ROI', value: `$${(wallet.wallet_roi_earned || 0).toFixed(2)}`, trend: '0.20%', color: 'text-cyan-400', sparkColor: '#22d3ee' },
+              { label: 'Pool ROI', value: `$${(wallet.pool_roi_earned || 0).toFixed(2)}`, trend: '1.00%', color: 'text-amber-400', sparkColor: '#fbbf24' },
               { label: 'Direct Income', value: `$${(wallet.direct_income || 0).toFixed(2)}`, trend: 'Active', color: 'text-secondary', sparkColor: '#a855f7' },
               { label: 'Level Income', value: `$${(wallet.level_income || 0).toFixed(2)}`, trend: 'Network', color: 'text-green-400', sparkColor: '#10b981' },
             ].map((stat, i) => (
