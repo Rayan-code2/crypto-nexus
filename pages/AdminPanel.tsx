@@ -14,6 +14,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
   const [users, setUsers] = useState<(User & { wallets: Wallet[] })[]>([]);
   const [exchangeRequests, setExchangeRequests] = useState<ExchangerRequest[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +65,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
 
       const taskData = await mockApi.db.getTasks();
       setTasks(taskData as any);
+
+      const subData = await mockApi.db.getTaskSubmissions();
+      setSubmissions(subData as any);
 
       // Fetch global transactions for activity log
       try {
@@ -150,9 +154,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    await mockApi.db.addTask(newTask);
-    showStatus("New Task Deployed");
-    setNewTask({ title: '', description: '', reward: 0, link: '' });
+    try {
+      // Validate reward
+      if (isNaN(newTask.reward) || newTask.reward <= 0) {
+        showStatus("Invalid Reward Amount", "error");
+        return;
+      }
+
+      await mockApi.db.addTask(newTask);
+      showStatus("New Task Deployed");
+      setNewTask({ title: '', description: '', reward: 0, link: '' });
+      fetchData();
+    } catch (err: any) {
+      console.error("Task deployment failed:", err);
+      showStatus(err.message || "Task Deployment Failed", "error");
+    }
+  };
+
+  const handleApproveTask = async (subId: string, status: 'approved' | 'rejected') => {
+    await mockApi.db.approveTaskSubmission(subId, status);
+    showStatus(`Task ${status.toUpperCase()}`);
     fetchData();
   };
 
@@ -1246,22 +1267,63 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
              </form>
           </div>
           
-          <div className="lg:col-span-2 space-y-4">
-             <h3 className="text-xs font-black uppercase tracking-widest mb-4">Live Task Feed</h3>
-             {tasks.map(t => (
-               <div key={t.id} className="glass p-6 rounded-3xl flex justify-between items-center group border-white/5">
-                 <div>
-                   <h4 className="font-bold text-white text-lg">{t.title}</h4>
-                   <p className="text-slate-500 text-xs">{t.description}</p>
-                   <p className="text-primary font-black text-[10px] mt-2 uppercase">Reward: ${t.reward} USDT</p>
+          <div className="lg:col-span-2 space-y-8">
+             <div className="space-y-4">
+               <h3 className="text-xs font-black uppercase tracking-widest mb-4">Pending Submissions</h3>
+               {submissions.filter(s => s.status === 'pending').length === 0 ? (
+                 <p className="text-slate-600 italic text-sm">No pending task proofs...</p>
+               ) : (
+                 submissions.filter(s => s.status === 'pending').map(s => {
+                   const task = tasks.find(t => t.id === s.task_id);
+                   const user = users.find(u => u.id === s.user_id);
+                   return (
+                     <div key={s.id} className="glass p-6 rounded-3xl border-amber-500/20 bg-amber-500/5">
+                       <div className="flex justify-between items-start mb-4">
+                         <div>
+                           <h4 className="font-bold text-white">{task?.title || 'Unknown Task'}</h4>
+                           <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Agent: {user?.email || s.user_id}</p>
+                         </div>
+                         <div className="text-right">
+                           <p className="text-lg font-black text-amber-500">${task?.reward} USDT</p>
+                         </div>
+                       </div>
+                       <div className="flex gap-3">
+                         <button 
+                           onClick={() => handleApproveTask(s.id, 'rejected')}
+                           className="flex-1 py-2 bg-white/5 text-red-500 font-black rounded-xl uppercase text-[9px] tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                         >
+                           Reject
+                         </button>
+                         <button 
+                           onClick={() => handleApproveTask(s.id, 'approved')}
+                           className="flex-1 py-2 bg-green-500 text-darker font-black rounded-xl uppercase text-[9px] tracking-widest hover:scale-105 transition-all"
+                         >
+                           Approve & Pay
+                         </button>
+                       </div>
+                     </div>
+                   );
+                 })
+               )}
+             </div>
+
+             <div className="space-y-4">
+               <h3 className="text-xs font-black uppercase tracking-widest mb-4">Active Task Feed</h3>
+               {tasks.map(t => (
+                 <div key={t.id} className="glass p-6 rounded-3xl flex justify-between items-center group border-white/5">
+                   <div>
+                     <h4 className="font-bold text-white text-lg">{t.title}</h4>
+                     <p className="text-slate-500 text-xs">{t.description}</p>
+                     <p className="text-primary font-black text-[10px] mt-2 uppercase">Reward: ${t.reward} USDT</p>
+                   </div>
+                   <button className="p-4 rounded-2xl bg-red-500/10 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white">
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                     </svg>
+                   </button>
                  </div>
-                 <button className="p-4 rounded-2xl bg-red-500/10 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white">
-                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                   </svg>
-                 </button>
-               </div>
-             ))}
+               ))}
+             </div>
           </div>
         </div>
       )}

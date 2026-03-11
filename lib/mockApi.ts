@@ -209,7 +209,7 @@ export const mockApi = {
         }
       }
 
-      // 2. AutoPool ROI (1% Daily on $10)
+      // 2. AutoPool ROI (0.5% Daily on $10)
       // Only if in Pool 1 and status is active
       const pools = getStorage('pools');
       const pool1 = pools.find((p: any) => p.user_id === userId && p.pool_number === 1 && p.status === 'active');
@@ -220,7 +220,7 @@ export const mockApi = {
 
         if (diffHoursPool >= 24) {
           const days = Math.floor(diffHoursPool / 24);
-          const poolROI = 10 * 0.01 * days; // 1% of $10
+          const poolROI = 10 * 0.005 * days; // 0.5% of $10
 
           if (poolROI > 0) {
             wallet.balance += poolROI;
@@ -279,11 +279,63 @@ export const mockApi = {
       return tasks;
     },
 
-    submitTask: async (userId: string, taskId: string) => {
-      if (isAppwriteConfigured()) return await appwriteService.db.submitTask(userId, taskId);
+    submitTask: async (userId: string, taskId: string, proof: string) => {
+      if (isAppwriteConfigured()) return await appwriteService.db.submitTask(userId, taskId, proof);
 
       const subs = getStorage('task_submissions');
-      setStorage('task_submissions', [...subs, { user_id: userId, task_id: taskId, status: 'pending', id: Date.now().toString() }]);
+      const newSub = { 
+        user_id: userId, 
+        task_id: taskId, 
+        status: 'pending', 
+        proof,
+        id: 'sub_' + Date.now(),
+        created_at: new Date().toISOString()
+      };
+      setStorage('task_submissions', [...subs, newSub]);
+    },
+
+    getTaskSubmissions: async (userId?: string) => {
+      if (isAppwriteConfigured()) return await appwriteService.db.getTaskSubmissions(userId);
+      const subs = getStorage('task_submissions');
+      return userId ? subs.filter((s: any) => s.user_id === userId) : subs;
+    },
+
+    approveTaskSubmission: async (submissionId: string, status: 'approved' | 'rejected') => {
+      if (isAppwriteConfigured()) return await appwriteService.db.approveTaskSubmission(submissionId, status);
+      
+      const subs = getStorage('task_submissions');
+      const subIndex = subs.findIndex((s: any) => s.id === submissionId);
+      if (subIndex === -1) return;
+
+      const sub = subs[subIndex];
+      if (sub.status !== 'pending') return;
+
+      sub.status = status;
+      setStorage('task_submissions', subs);
+
+      if (status === 'approved') {
+        const tasks = getStorage('tasks');
+        const task = tasks.find((t: any) => t.id === sub.task_id);
+        if (task) {
+          const wallet = await mockApi.db.getWallet(sub.user_id);
+          wallet.balance += task.reward;
+          wallet.total_earned += task.reward;
+          
+          const wallets = getStorage('wallets');
+          setStorage('wallets', wallets.map((w: any) => w.user_id === sub.user_id ? wallet : w));
+
+          const txs = getStorage('transactions');
+          txs.push({
+            id: 'tx_task_' + Date.now(),
+            user_id: sub.user_id,
+            type: 'task',
+            amount: task.reward,
+            status: 'completed',
+            created_at: new Date().toISOString()
+          });
+          setStorage('transactions', txs);
+        }
+      }
     },
 
     getExchangeRequests: async (userId?: string) => {
@@ -400,25 +452,65 @@ export const mockApi = {
 
       // Case 1: User is already active, just add balance
       if (user.is_active) {
-        await mockApi.db.updateWallet(userId, wallet.balance + amount);
+        const currentBalance = Number(wallet.balance) || 0;
+        const addAmount = Number(amount) || 0;
+        await mockApi.db.updateWallet(userId, currentBalance + addAmount);
+        
+        const txs = getStorage('transactions');
+        txs.push({
+          id: 'tx_deposit_' + Date.now(),
+          user_id: userId,
+          type: 'exchange',
+          amount: addAmount,
+          status: 'completed',
+          created_at: new Date().toISOString()
+        });
+        setStorage('transactions', txs);
         return;
       }
 
       // Case 2: User is inactive but deposit is less than $10
-      if (amount < 10) {
-        await mockApi.db.updateWallet(userId, wallet.balance + amount);
+      if (Number(amount) < 10) {
+        const currentBalance = Number(wallet.balance) || 0;
+        const addAmount = Number(amount) || 0;
+        await mockApi.db.updateWallet(userId, currentBalance + addAmount);
+        
+        const txs = getStorage('transactions');
+        txs.push({
+          id: 'tx_partial_' + Date.now(),
+          user_id: userId,
+          type: 'exchange',
+          amount: addAmount,
+          status: 'completed',
+          created_at: new Date().toISOString()
+        });
+        setStorage('transactions', txs);
         return;
       }
 
       // Case 3: User is inactive and deposit is $10 or more (Activation)
       user.is_active = true;
-      const remainingBalance = amount - 10; // Deduct $10 activation fee
+      const remainingBalance = (Number(amount) || 0) - 10; // Deduct $10 activation fee
+      const currentBalance = Number(wallet.balance) || 0;
+
       if (remainingBalance > 0) {
-        await mockApi.db.updateWallet(userId, wallet.balance + remainingBalance);
+        await mockApi.db.updateWallet(userId, currentBalance + remainingBalance);
       } else {
         // Even if amount is exactly 10, we ensure wallet balance doesn't increase by 10
-        await mockApi.db.updateWallet(userId, wallet.balance);
+        await mockApi.db.updateWallet(userId, currentBalance);
       }
+
+      // Log Activation Transaction
+      const txs = getStorage('transactions');
+      txs.push({
+        id: 'tx_activation_' + Date.now(),
+        user_id: userId,
+        type: 'exchange',
+        amount: Number(amount),
+        status: 'completed',
+        created_at: new Date().toISOString()
+      });
+      setStorage('transactions', txs);
 
       // REMOVED: Automatic Pool 1 Entry here. It now happens via sponsor's direct count.
       

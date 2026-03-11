@@ -6,6 +6,7 @@ import {
   Users, 
   Zap, 
   ArrowUpRight, 
+  ArrowDownCircle,
   Filter,
   Calendar,
   Search,
@@ -59,15 +60,16 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user }) => {
   };
 
   const incomeTypes = [
-    { id: 'all', label: 'All Income', icon: <Filter size={14} /> },
+    { id: 'all', label: 'All Activity', icon: <Filter size={14} /> },
     { id: 'roi', label: 'ROI Income', icon: <TrendingUp size={14} /> },
     { id: 'pool', label: 'Pool Income', icon: <Zap size={14} /> },
     { id: 'level', label: 'Level Income', icon: <Users size={14} /> },
     { id: 'direct', label: 'Direct Income', icon: <ArrowUpRight size={14} /> },
+    { id: 'exchange', label: 'Exchange/Deposit', icon: <ArrowDownCircle size={14} /> },
   ];
 
   const filteredTransactions = transactions.filter(tx => {
-    const matchesFilter = filter === 'all' ? ['roi', 'pool', 'level', 'direct', 'pool_payout'].includes(tx.type) : (tx.type === filter || (filter === 'pool' && tx.type === 'pool_payout'));
+    const matchesFilter = filter === 'all' ? ['roi', 'pool', 'level', 'direct', 'pool_payout', 'exchange'].includes(tx.type) : (tx.type === filter || (filter === 'pool' && tx.type === 'pool_payout'));
     const matchesSearch = tx.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          tx.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (tx.from_user_id && tx.from_user_id.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -178,6 +180,7 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user }) => {
                     {tx.type === 'roi' ? <TrendingUp size={24} /> :
                      (tx.type === 'pool' || tx.type === 'pool_payout') ? <Zap size={24} /> :
                      tx.type === 'level' ? <Users size={24} /> :
+                     tx.type === 'exchange' ? <ArrowDownCircle size={24} /> :
                      <ArrowUpRight size={24} />}
                   </div>
                   <div>
@@ -185,13 +188,10 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user }) => {
                       <p className="text-sm font-black text-white uppercase tracking-tight">
                         {tx.type === 'level' 
                           ? (getLevelFromTx(tx) ? `LEVEL ${getLevelFromTx(tx)} INCOME` : 'LEVEL INCOME')
-                          : tx.type === 'pool_payout' ? 'Pool Payout' : `${tx.type} Income`}
+                          : tx.type === 'pool_payout' ? 'Pool Payout' : 
+                            tx.type === 'exchange' ? 'Protocol Activation/Deposit' :
+                            `${tx.type} Income`}
                       </p>
-                      {getLevelFromTx(tx) && (
-                        <span className="text-[10px] px-3 py-1 rounded-lg bg-primary text-darker font-black uppercase tracking-widest shadow-lg shadow-primary/20">
-                          LEVEL {getLevelFromTx(tx)}
-                        </span>
-                      )}
                       <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-green-500/10 border border-green-500/20">
                         <CheckCircle2 size={8} className="text-green-500" />
                         <span className="text-[7px] text-green-500 font-black uppercase tracking-widest">
@@ -215,13 +215,6 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user }) => {
                         </div>
                       )}
 
-                      {getLevelFromTx(tx) && (
-                        <div className="flex items-center gap-1.5 text-secondary">
-                          <Users size={10} />
-                          <span className="text-[9px] font-bold uppercase tracking-widest">LEVEL: {getLevelFromTx(tx)}</span>
-                        </div>
-                      )}
-
                       <button 
                         onClick={() => copyToClipboard(tx.id)}
                         className="flex items-center gap-1.5 text-slate-600 hover:text-slate-400 transition-colors"
@@ -240,10 +233,6 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user }) => {
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">USDT Protocol</p>
-                    <div className="w-1 h-1 rounded-full bg-slate-800 hidden sm:block"></div>
-                    <button className="text-[8px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1">
-                      Details <ExternalLink size={8} />
-                    </button>
                   </div>
                 </div>
               </div>

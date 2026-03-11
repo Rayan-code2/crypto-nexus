@@ -161,7 +161,7 @@ export const appwriteService = {
       return response.documents.map(doc => ({ ...doc, id: doc.$id }));
     },
 
-    submitTask: async (userId: string, taskId: string) => {
+    submitTask: async (userId: string, taskId: string, proof: string) => {
       await databases.createDocument(
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.submissions!,
@@ -170,8 +170,32 @@ export const appwriteService = {
           user_id: userId,
           task_id: taskId,
           status: 'pending',
-          created_at: new Date().toISOString()
+          proof: proof
         }
+      );
+    },
+
+    getTaskSubmissions: async (userId?: string) => {
+      const queries = userId ? [Query.equal('user_id', userId)] : [];
+      queries.push(Query.orderDesc('$createdAt'));
+      queries.push(Query.limit(100));
+      
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.submissions!,
+        queries
+      );
+      return response.documents.map(doc => ({ ...doc, id: doc.$id }));
+    },
+
+    approveTaskSubmission: async (submissionId: string, status: 'approved' | 'rejected') => {
+      // This is a placeholder for the logic. 
+      // In a real app, this would be a server-side function to handle wallet updates securely.
+      return await databases.updateDocument(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.submissions!,
+        submissionId,
+        { status }
       );
     },
 
@@ -449,7 +473,7 @@ export const appwriteService = {
         }
       }
 
-      // 2. AutoPool ROI (1% Daily on $10)
+      // 2. AutoPool ROI (0.5% Daily on $10)
       const poolsRes = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.pools!,
@@ -463,7 +487,7 @@ export const appwriteService = {
 
         if (diffHoursPool >= 24) {
           const days = Math.floor(diffHoursPool / 24);
-          const poolROI = 10 * 0.01 * days; // 1% of $10
+          const poolROI = 10 * 0.005 * days; // 0.5% of $10
 
           if (poolROI > 0) {
             updateData.balance = (updateData.balance || wallet.balance || 0) + poolROI;
@@ -507,25 +531,90 @@ export const appwriteService = {
 
       // Case 1: User is already active
       if (user.is_active) {
-        await appwriteService.db.updateWallet(userId, wallet.balance + amount);
+        const currentBalance = Number(wallet.balance) || 0;
+        const addAmount = Number(amount) || 0;
+        await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
+        
+        // Log Transaction
+        try {
+          await databases.createDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.transactions!,
+            ID.unique(),
+            {
+              user_id: userId,
+              type: 'exchange',
+              amount: addAmount,
+              status: 'completed',
+              created_at: new Date().toISOString()
+            }
+          );
+        } catch (e) {
+          console.error("Failed to log deposit transaction", e);
+        }
         return;
       }
 
       // Case 2: Inactive but amount < 10
-      if (amount < 10) {
-        await appwriteService.db.updateWallet(userId, wallet.balance + amount);
+      if (Number(amount) < 10) {
+        const currentBalance = Number(wallet.balance) || 0;
+        const addAmount = Number(amount) || 0;
+        await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
+        
+        // Log Transaction
+        try {
+          await databases.createDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.transactions!,
+            ID.unique(),
+            {
+              user_id: userId,
+              type: 'exchange',
+              amount: addAmount,
+              status: 'completed',
+              created_at: new Date().toISOString()
+            }
+          );
+        } catch (e) {
+          console.error("Failed to log partial deposit transaction", e);
+        }
         return;
       }
 
       // Case 3: Activation (amount >= 10)
-      await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId, { is_active: true });
+      try {
+        await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId, { is_active: true });
+      } catch (e: any) {
+        console.error("Failed to set is_active: true", e);
+        throw new Error(`Activation failed: Could not update user status. ${e.message}`);
+      }
       
-      const remainingBalance = amount - 10;
+      const remainingBalance = (Number(amount) || 0) - 10;
+      const currentBalance = Number(wallet.balance) || 0;
+
       if (remainingBalance > 0) {
-        await appwriteService.db.updateWallet(userId, wallet.balance + remainingBalance);
+        await appwriteService.db.updateWallet(userId, currentBalance + remainingBalance);
       } else {
         // Ensure wallet balance doesn't increase by 10 if amount is exactly 10
-        await appwriteService.db.updateWallet(userId, wallet.balance);
+        await appwriteService.db.updateWallet(userId, currentBalance);
+      }
+
+      // Log Activation Transaction
+      try {
+        await databases.createDocument(
+          APPWRITE_CONFIG.databaseId!,
+          APPWRITE_CONFIG.collections.transactions!,
+          ID.unique(),
+          {
+            user_id: userId,
+            type: 'exchange',
+            amount: Number(amount),
+            status: 'completed',
+            created_at: new Date().toISOString()
+          }
+        );
+      } catch (e) {
+        console.error("Failed to log activation transaction", e);
       }
 
       // REMOVED: Automatic Pool 1 Entry here. It now happens via sponsor's direct count.
@@ -933,7 +1022,13 @@ export const appwriteService = {
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.tasks!,
         ID.unique(),
-        { ...task, is_active: true, created_at: new Date().toISOString() }
+        { 
+          title: task.title,
+          description: task.description,
+          reward: task.reward,
+          link: task.link,
+          is_active: true 
+        }
       );
     },
 
