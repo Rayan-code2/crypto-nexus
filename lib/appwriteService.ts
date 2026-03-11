@@ -123,33 +123,45 @@ export const appwriteService = {
 
   db: {
     getWallet: async (userId: string) => {
-      const response = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.wallets!,
-        [Query.equal('user_id', userId)]
-      );
-      if (response.documents.length === 0) {
-        // Create a wallet if it doesn't exist
-        const newWallet = await databases.createDocument(
+      try {
+        const response = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId!,
           APPWRITE_CONFIG.collections.wallets!,
-          ID.unique(),
-          {
-            user_id: userId,
-            balance: 0,
-            total_earned: 0,
-            roi_earned: 0,
-            wallet_roi_earned: 0,
-            pool_roi_earned: 0,
-            total_withdrawn: 0,
-            last_roi_at: new Date().toISOString(),
-            last_pool_roi_at: new Date().toISOString()
-          }
+          [Query.equal('user_id', userId)]
         );
-        return { ...newWallet, id: newWallet.$id };
+        if (response.documents.length === 0) {
+          // Create a wallet if it doesn't exist
+          const newWallet = await databases.createDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.wallets!,
+            ID.unique(),
+            {
+              user_id: userId,
+              balance: 0.0,
+              total_earned: 0.0,
+              roi_earned: 0.0,
+              wallet_roi_earned: 0.0,
+              pool_roi_earned: 0.0,
+              direct_income: 0.0,
+              level_income: 0.0,
+              hold_balance: 0.0,
+              total_withdrawn: 0.0,
+              last_roi_at: new Date().toISOString(),
+              last_pool_roi_at: new Date().toISOString()
+            }
+          );
+          return { ...newWallet, id: newWallet.$id };
+        }
+        const wallet = response.documents[0];
+        return { ...wallet, id: wallet.$id };
+      } catch (error: any) {
+        console.error("Appwrite getWallet error:", error);
+        if (error.message?.includes('Unknown attribute')) {
+          const attr = error.message.match(/"([^"]+)"/)?.[1] || "balance";
+          throw new Error(`Appwrite Schema Error: Please add '${attr}' (Float/Double) attribute to your 'wallets' collection.`);
+        }
+        throw error;
       }
-      const wallet = response.documents[0];
-      return { ...wallet, id: wallet.$id };
     },
 
     getTasks: async () => {
@@ -161,7 +173,7 @@ export const appwriteService = {
       return response.documents.map(doc => ({ ...doc, id: doc.$id }));
     },
 
-    submitTask: async (userId: string, taskId: string) => {
+    submitTask: async (userId: string, taskId: string, proof: string) => {
       await databases.createDocument(
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.submissions!,
@@ -170,8 +182,32 @@ export const appwriteService = {
           user_id: userId,
           task_id: taskId,
           status: 'pending',
-          created_at: new Date().toISOString()
+          proof: proof
         }
+      );
+    },
+
+    getTaskSubmissions: async (userId?: string) => {
+      const queries = userId ? [Query.equal('user_id', userId)] : [];
+      queries.push(Query.orderDesc('$createdAt'));
+      queries.push(Query.limit(100));
+      
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.submissions!,
+        queries
+      );
+      return response.documents.map(doc => ({ ...doc, id: doc.$id }));
+    },
+
+    approveTaskSubmission: async (submissionId: string, status: 'approved' | 'rejected') => {
+      // This is a placeholder for the logic. 
+      // In a real app, this would be a server-side function to handle wallet updates securely.
+      return await databases.updateDocument(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.submissions!,
+        submissionId,
+        { status }
       );
     },
 
@@ -269,13 +305,20 @@ export const appwriteService = {
     },
 
     updateWallet: async (userId: string, amount: number) => {
-      const wallet = await appwriteService.db.getWallet(userId);
-      return await databases.updateDocument(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.wallets!,
-        wallet.$id,
-        { balance: amount }
-      );
+      try {
+        const wallet = await appwriteService.db.getWallet(userId);
+        const finalAmount = parseFloat(amount.toFixed(4));
+        console.log(`Updating wallet for ${userId} to ${finalAmount}`);
+        return await databases.updateDocument(
+          APPWRITE_CONFIG.databaseId!,
+          APPWRITE_CONFIG.collections.wallets!,
+          wallet.$id,
+          { balance: finalAmount }
+        );
+      } catch (error: any) {
+        console.error("Appwrite updateWallet error:", error);
+        throw error;
+      }
     },
 
     deleteUser: async (userId: string) => {
@@ -409,67 +452,29 @@ export const appwriteService = {
     },
 
     distributeROI: async (userId: string) => {
-      const wallet = await appwriteService.db.getWallet(userId) as any as Wallet & { $id: string };
-      if (!wallet) return;
+      try {
+        const wallet = await appwriteService.db.getWallet(userId) as any as Wallet & { $id: string };
+        if (!wallet) return;
 
-      const now = Date.now();
-      let updateData: any = {};
-      let walletUpdated = false;
+        const now = Date.now();
+        let updateData: any = {};
+        let walletUpdated = false;
 
-      // 1. Wallet ROI (0.20% Daily)
-      const lastROI = wallet.last_roi_at ? new Date(wallet.last_roi_at).getTime() : 0;
-      const diffHoursROI = (now - lastROI) / (1000 * 60 * 60);
+        // 1. Wallet ROI (0.20% Daily)
+        const lastROI = wallet.last_roi_at ? new Date(wallet.last_roi_at).getTime() : 0;
+        const diffHoursROI = (now - lastROI) / (1000 * 60 * 60);
 
-      if (diffHoursROI >= 24) {
-        const days = Math.floor(diffHoursROI / 24);
-        const dailyRate = 0.002; // 0.20%
-        const roi = (wallet.balance || 0) * dailyRate * days;
-        
-        if (roi > 0) {
-          updateData.balance = (wallet.balance || 0) + roi;
-          updateData.total_earned = (wallet.total_earned || 0) + roi;
-          updateData.wallet_roi_earned = (wallet.wallet_roi_earned || 0) + roi;
-          updateData.roi_earned = (wallet.roi_earned || 0) + roi;
-          updateData.last_roi_at = new Date().toISOString();
-          walletUpdated = true;
-
-          // Log transaction
-          await databases.createDocument(
-            APPWRITE_CONFIG.databaseId!,
-            APPWRITE_CONFIG.collections.transactions!,
-            ID.unique(),
-            {
-              user_id: userId,
-              type: 'roi',
-              amount: roi,
-              status: 'completed',
-              created_at: new Date().toISOString()
-            }
-          );
-        }
-      }
-
-      // 2. AutoPool ROI (1% Daily on $10)
-      const poolsRes = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.pools!,
-        [Query.equal('user_id', userId), Query.equal('pool_number', 1), Query.equal('status', 'active')]
-      );
-      
-      if (poolsRes.total > 0) {
-        const pool1 = poolsRes.documents[0];
-        const lastPoolROI = wallet.last_pool_roi_at ? new Date(wallet.last_pool_roi_at).getTime() : new Date(pool1.created_at).getTime();
-        const diffHoursPool = (now - lastPoolROI) / (1000 * 60 * 60);
-
-        if (diffHoursPool >= 24) {
-          const days = Math.floor(diffHoursPool / 24);
-          const poolROI = 10 * 0.01 * days; // 1% of $10
-
-          if (poolROI > 0) {
-            updateData.balance = (updateData.balance || wallet.balance || 0) + poolROI;
-            updateData.total_earned = (updateData.total_earned || wallet.total_earned || 0) + poolROI;
-            updateData.pool_roi_earned = (wallet.pool_roi_earned || 0) + poolROI;
-            updateData.last_pool_roi_at = new Date().toISOString();
+        if (diffHoursROI >= 24) {
+          const days = Math.floor(diffHoursROI / 24);
+          const dailyRate = 0.002; // 0.20%
+          const roi = parseFloat(((wallet.balance || 0) * dailyRate * days).toFixed(4));
+          
+          if (roi > 0) {
+            updateData.balance = parseFloat(((wallet.balance || 0) + roi).toFixed(4));
+            updateData.total_earned = parseFloat(((wallet.total_earned || 0) + roi).toFixed(4));
+            updateData.wallet_roi_earned = parseFloat(((wallet.wallet_roi_earned || 0) + roi).toFixed(4));
+            updateData.roi_earned = parseFloat(((wallet.roi_earned || 0) + roi).toFixed(4));
+            updateData.last_roi_at = new Date().toISOString();
             walletUpdated = true;
 
             // Log transaction
@@ -480,82 +485,129 @@ export const appwriteService = {
               {
                 user_id: userId,
                 type: 'roi',
-                amount: poolROI,
+                amount: roi,
                 status: 'completed',
                 created_at: new Date().toISOString()
               }
             );
           }
         }
-      }
 
-      if (walletUpdated) {
-        await databases.updateDocument(
+        // 2. AutoPool ROI (0.5% Daily on $10)
+        const poolsRes = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId!,
-          APPWRITE_CONFIG.collections.wallets!,
-          wallet.$id,
-          updateData
+          APPWRITE_CONFIG.collections.pools!,
+          [Query.equal('user_id', userId), Query.equal('pool_number', 1), Query.equal('status', 'active')]
         );
-      }
+        
+        if (poolsRes.total > 0) {
+          const pool1 = poolsRes.documents[0];
+          const lastPoolROI = wallet.last_pool_roi_at ? new Date(wallet.last_pool_roi_at).getTime() : new Date(pool1.created_at).getTime();
+          const diffHoursPool = (now - lastPoolROI) / (1000 * 60 * 60);
 
-      return wallet;
+          if (diffHoursPool >= 24) {
+            const days = Math.floor(diffHoursPool / 24);
+            const poolROI = parseFloat((10 * 0.005 * days).toFixed(4)); // 0.5% of $10
+
+            if (poolROI > 0) {
+              updateData.balance = parseFloat(((updateData.balance || wallet.balance || 0) + poolROI).toFixed(4));
+              updateData.total_earned = parseFloat(((updateData.total_earned || wallet.total_earned || 0) + poolROI).toFixed(4));
+              updateData.pool_roi_earned = parseFloat(((wallet.pool_roi_earned || 0) + poolROI).toFixed(4));
+              updateData.last_pool_roi_at = new Date().toISOString();
+              walletUpdated = true;
+
+              // Log transaction
+              await databases.createDocument(
+                APPWRITE_CONFIG.databaseId!,
+                APPWRITE_CONFIG.collections.transactions!,
+                ID.unique(),
+                {
+                  user_id: userId,
+                  type: 'roi',
+                  amount: poolROI,
+                  status: 'completed',
+                  created_at: new Date().toISOString()
+                }
+              );
+            }
+          }
+        }
+
+        if (walletUpdated) {
+          console.log(`ROI Distribution for ${userId}:`, updateData);
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.wallets!,
+            wallet.$id,
+            updateData
+          );
+        }
+
+        return wallet;
+      } catch (error) {
+        console.error("ROI Distribution Error:", error);
+        // Don't throw, just log so it doesn't block other operations
+      }
     },
 
     activateUser: async (userId: string, amount: number) => {
-      const user = await databases.getDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId) as any;
-      const wallet = await appwriteService.db.getWallet(userId) as any as Wallet;
+      try {
+        const user = await databases.getDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId) as any;
+        const wallet = await appwriteService.db.getWallet(userId) as any as Wallet;
 
-      // Case 1: User is already active
-      if (user.is_active) {
-        const currentBalance = Number(wallet.balance) || 0;
-        const addAmount = Number(amount) || 0;
-        await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
-        
-        // Log Transaction
-        try {
-          await databases.createDocument(
-            APPWRITE_CONFIG.databaseId!,
-            APPWRITE_CONFIG.collections.transactions!,
-            ID.unique(),
-            {
-              user_id: userId,
-              type: 'exchange',
-              amount: addAmount,
-              status: 'completed',
-              created_at: new Date().toISOString()
-            }
-          );
-        } catch (e) {
-          console.error("Failed to log deposit transaction", e);
-        }
-        return;
-      }
+        console.log(`Activating/Updating user ${userId} with amount ${amount}. Current status: ${user.is_active}`);
 
-      // Case 2: Inactive but amount < 10
-      if (Number(amount) < 10) {
-        const currentBalance = Number(wallet.balance) || 0;
-        const addAmount = Number(amount) || 0;
-        await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
-        
-        // Log Transaction
-        try {
-          await databases.createDocument(
-            APPWRITE_CONFIG.databaseId!,
-            APPWRITE_CONFIG.collections.transactions!,
-            ID.unique(),
-            {
-              user_id: userId,
-              type: 'exchange',
-              amount: addAmount,
-              status: 'completed',
-              created_at: new Date().toISOString()
-            }
-          );
-        } catch (e) {
-          console.error("Failed to log partial deposit transaction", e);
+        // Case 1: User is already active
+        if (user.is_active) {
+          const currentBalance = parseFloat((wallet.balance || 0).toString());
+          const addAmount = parseFloat(amount.toString());
+          await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
+          
+          // Log Transaction
+          try {
+            await databases.createDocument(
+              APPWRITE_CONFIG.databaseId!,
+              APPWRITE_CONFIG.collections.transactions!,
+              ID.unique(),
+              {
+                user_id: userId,
+                type: 'exchange',
+                amount: addAmount,
+                status: 'completed',
+                created_at: new Date().toISOString()
+              }
+            );
+          } catch (e) {
+            console.error("Failed to log deposit transaction", e);
+          }
+          return;
         }
-        return;
-      }
+
+        // Case 2: Inactive but amount < 10
+        if (parseFloat(amount.toString()) < 10) {
+          const currentBalance = parseFloat((wallet.balance || 0).toString());
+          const addAmount = parseFloat(amount.toString());
+          await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
+          
+          // Log Transaction
+          try {
+            await databases.createDocument(
+              APPWRITE_CONFIG.databaseId!,
+              APPWRITE_CONFIG.collections.transactions!,
+              ID.unique(),
+              {
+                user_id: userId,
+                type: 'exchange',
+                amount: addAmount,
+                status: 'completed',
+                created_at: new Date().toISOString()
+              }
+            );
+          } catch (e) {
+            console.error("Failed to log partial deposit transaction", e);
+          }
+          return;
+        }
 
       // Case 3: Activation (amount >= 10)
       try {
@@ -565,15 +617,15 @@ export const appwriteService = {
         throw new Error(`Activation failed: Could not update user status. ${e.message}`);
       }
       
-      const remainingBalance = (Number(amount) || 0) - 10;
-      const currentBalance = Number(wallet.balance) || 0;
+        const remainingBalance = parseFloat(amount.toString()) - 10;
+        const currentBalance = parseFloat((wallet.balance || 0).toString());
 
-      if (remainingBalance > 0) {
-        await appwriteService.db.updateWallet(userId, currentBalance + remainingBalance);
-      } else {
-        // Ensure wallet balance doesn't increase by 10 if amount is exactly 10
-        await appwriteService.db.updateWallet(userId, currentBalance);
-      }
+        if (remainingBalance > 0) {
+          await appwriteService.db.updateWallet(userId, currentBalance + remainingBalance);
+        } else {
+          // Ensure wallet balance doesn't increase by 10 if amount is exactly 10
+          await appwriteService.db.updateWallet(userId, currentBalance);
+        }
 
       // Log Activation Transaction
       try {
@@ -584,7 +636,7 @@ export const appwriteService = {
           {
             user_id: userId,
             type: 'exchange',
-            amount: Number(amount),
+            amount: parseFloat(amount.toString()),
             status: 'completed',
             created_at: new Date().toISOString()
           }
@@ -799,7 +851,11 @@ export const appwriteService = {
       } catch (e) {
         console.error("Level commission distribution error:", e);
       }
-    },
+    } catch (error: any) {
+      console.error("Appwrite activateUser error:", error);
+      throw error;
+    }
+  },
 
     processPoolFilling: async (enteringUserId: string, poolNum: number) => {
       // Find the oldest active pool that needs filling
@@ -998,7 +1054,13 @@ export const appwriteService = {
         APPWRITE_CONFIG.databaseId!,
         APPWRITE_CONFIG.collections.tasks!,
         ID.unique(),
-        { ...task, is_active: true, created_at: new Date().toISOString() }
+        { 
+          title: task.title,
+          description: task.description,
+          reward: task.reward,
+          link: task.link,
+          is_active: true 
+        }
       );
     },
 
@@ -1103,6 +1165,42 @@ export const appwriteService = {
         [Query.orderDesc('created_at'), Query.limit(limit)]
       );
       return response.documents.map(doc => ({ ...doc, id: doc.$id }));
+    },
+
+    repairPools: async () => {
+      if (!isAppwriteConfigured()) return;
+      
+      const usersRes = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.users!,
+        [Query.equal('is_qualified', true), Query.limit(5000)]
+      );
+
+      let repairedCount = 0;
+      for (const user of usersRes.documents) {
+        const poolsRes = await databases.listDocuments(
+          APPWRITE_CONFIG.databaseId!,
+          APPWRITE_CONFIG.collections.pools!,
+          [Query.equal('user_id', user.$id), Query.equal('pool_number', 1)]
+        );
+
+        if (poolsRes.total === 0) {
+          await databases.createDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.pools!,
+            ID.unique(),
+            {
+              user_id: user.$id,
+              pool_number: 1,
+              status: 'active',
+              members_count: 0,
+              created_at: user.created_at || new Date().toISOString()
+            }
+          );
+          repairedCount++;
+        }
+      }
+      return repairedCount;
     }
   }
 };

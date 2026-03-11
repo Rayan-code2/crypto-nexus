@@ -209,7 +209,7 @@ export const mockApi = {
         }
       }
 
-      // 2. AutoPool ROI (1% Daily on $10)
+      // 2. AutoPool ROI (0.5% Daily on $10)
       // Only if in Pool 1 and status is active
       const pools = getStorage('pools');
       const pool1 = pools.find((p: any) => p.user_id === userId && p.pool_number === 1 && p.status === 'active');
@@ -220,7 +220,7 @@ export const mockApi = {
 
         if (diffHoursPool >= 24) {
           const days = Math.floor(diffHoursPool / 24);
-          const poolROI = 10 * 0.01 * days; // 1% of $10
+          const poolROI = 10 * 0.005 * days; // 0.5% of $10
 
           if (poolROI > 0) {
             wallet.balance += poolROI;
@@ -279,11 +279,63 @@ export const mockApi = {
       return tasks;
     },
 
-    submitTask: async (userId: string, taskId: string) => {
-      if (isAppwriteConfigured()) return await appwriteService.db.submitTask(userId, taskId);
+    submitTask: async (userId: string, taskId: string, proof: string) => {
+      if (isAppwriteConfigured()) return await appwriteService.db.submitTask(userId, taskId, proof);
 
       const subs = getStorage('task_submissions');
-      setStorage('task_submissions', [...subs, { user_id: userId, task_id: taskId, status: 'pending', id: Date.now().toString() }]);
+      const newSub = { 
+        user_id: userId, 
+        task_id: taskId, 
+        status: 'pending', 
+        proof,
+        id: 'sub_' + Date.now(),
+        created_at: new Date().toISOString()
+      };
+      setStorage('task_submissions', [...subs, newSub]);
+    },
+
+    getTaskSubmissions: async (userId?: string) => {
+      if (isAppwriteConfigured()) return await appwriteService.db.getTaskSubmissions(userId);
+      const subs = getStorage('task_submissions');
+      return userId ? subs.filter((s: any) => s.user_id === userId) : subs;
+    },
+
+    approveTaskSubmission: async (submissionId: string, status: 'approved' | 'rejected') => {
+      if (isAppwriteConfigured()) return await appwriteService.db.approveTaskSubmission(submissionId, status);
+      
+      const subs = getStorage('task_submissions');
+      const subIndex = subs.findIndex((s: any) => s.id === submissionId);
+      if (subIndex === -1) return;
+
+      const sub = subs[subIndex];
+      if (sub.status !== 'pending') return;
+
+      sub.status = status;
+      setStorage('task_submissions', subs);
+
+      if (status === 'approved') {
+        const tasks = getStorage('tasks');
+        const task = tasks.find((t: any) => t.id === sub.task_id);
+        if (task) {
+          const wallet = await mockApi.db.getWallet(sub.user_id);
+          wallet.balance += task.reward;
+          wallet.total_earned += task.reward;
+          
+          const wallets = getStorage('wallets');
+          setStorage('wallets', wallets.map((w: any) => w.user_id === sub.user_id ? wallet : w));
+
+          const txs = getStorage('transactions');
+          txs.push({
+            id: 'tx_task_' + Date.now(),
+            user_id: sub.user_id,
+            type: 'task',
+            amount: task.reward,
+            status: 'completed',
+            created_at: new Date().toISOString()
+          });
+          setStorage('transactions', txs);
+        }
+      }
     },
 
     getExchangeRequests: async (userId?: string) => {
@@ -764,6 +816,33 @@ export const mockApi = {
       
       const current = JSON.parse(localStorage.getItem('spiral_mock_settings') || '{}');
       localStorage.setItem('spiral_mock_settings', JSON.stringify({ ...current, ...data }));
+    },
+
+    repairPools: async () => {
+      if (isAppwriteConfigured()) return await appwriteService.db.repairPools();
+      
+      const users = getStorage('users');
+      const pools = getStorage('pools');
+      let repairedCount = 0;
+
+      for (const user of users) {
+        if (user.is_qualified) {
+          const hasPool = pools.find((p: any) => p.user_id === user.id && p.pool_number === 1);
+          if (!hasPool) {
+            pools.push({
+              id: 'pool_repair_' + Date.now() + Math.random(),
+              user_id: user.id,
+              pool_number: 1,
+              status: 'active',
+              members_count: 0,
+              created_at: user.created_at || new Date().toISOString()
+            });
+            repairedCount++;
+          }
+        }
+      }
+      setStorage('pools', pools);
+      return repairedCount;
     }
   }
 };

@@ -29,8 +29,8 @@ const App: React.FC = () => {
 
   const fetchUserData = useCallback(async (user: User) => {
     try {
-      // Distribute ROI if applicable
-      await mockApi.db.distributeROI(user.id);
+      // Distribute ROI if applicable (non-blocking)
+      mockApi.db.distributeROI(user.id).catch(err => console.error("ROI Distribution failed", err));
 
       const [walletData, freshUser, poolsData, settings] = await Promise.all([
         mockApi.db.getWallet(user.id),
