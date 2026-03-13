@@ -188,13 +188,13 @@ export const mockApi = {
       if (diffHoursROI >= 24) {
         const days = Math.floor(diffHoursROI / 24);
         const dailyRate = 0.002; // 0.20%
-        const roi = wallet.balance * dailyRate * days;
+        const roi = Number((wallet.balance * dailyRate * days).toFixed(4));
         
         if (roi > 0) {
-          wallet.balance += roi;
-          wallet.total_earned += roi;
-          wallet.wallet_roi_earned = (wallet.wallet_roi_earned || 0) + roi;
-          wallet.roi_earned = (wallet.roi_earned || 0) + roi; // For legacy
+          wallet.balance = Number((wallet.balance + roi).toFixed(4));
+          wallet.total_earned = Number((wallet.total_earned + roi).toFixed(4));
+          wallet.wallet_roi_earned = Number(((wallet.wallet_roi_earned || 0) + roi).toFixed(4));
+          wallet.roi_earned = Number(((wallet.roi_earned || 0) + roi).toFixed(4));
           wallet.last_roi_at = new Date().toISOString();
           walletUpdated = true;
           
@@ -220,12 +220,12 @@ export const mockApi = {
 
         if (diffHoursPool >= 24) {
           const days = Math.floor(diffHoursPool / 24);
-          const poolROI = 10 * 0.005 * days; // 0.5% of $10
+          const poolROI = Number((10 * 0.005 * days).toFixed(4)); // 0.5% of $10
 
           if (poolROI > 0) {
-            wallet.balance += poolROI;
-            wallet.total_earned += poolROI;
-            wallet.pool_roi_earned = (wallet.pool_roi_earned || 0) + poolROI;
+            wallet.balance = Number((wallet.balance + poolROI).toFixed(4));
+            wallet.total_earned = Number((wallet.total_earned + poolROI).toFixed(4));
+            wallet.pool_roi_earned = Number(((wallet.pool_roi_earned || 0) + poolROI).toFixed(4));
             wallet.last_pool_roi_at = new Date().toISOString();
             walletUpdated = true;
 

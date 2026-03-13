@@ -6,9 +6,10 @@ import { BRAND_CONFIG } from "../brandConfig";
 
 interface AdminPanelProps {
   user: User;
+  onLogout: () => void;
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
   const [activeSubTab, setActiveSubTab] = useState<
     "analytics" | "users" | "exchanger" | "tasks" | "settings" | "deposits"
   >("analytics");
@@ -50,6 +51,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
     null,
   );
   const [newPassword, setNewPassword] = useState("");
+  const [distributing, setDistributing] = useState(false);
+  const [distributeStatus, setDistributeStatus] = useState<string | null>(null);
   const [adminNewPassword, setAdminNewPassword] = useState("");
 
   // New Task Form State
@@ -259,6 +262,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
     }
   };
 
+  const handleDistributeROI = async () => {
+    setDistributing(true);
+    setDistributeStatus("Processing...");
+    try {
+      await mockApi.db.distributeROI("admin-trigger");
+      showStatus("Success: ROI distributed to all users!");
+      setDistributeStatus("Success: ROI distributed!");
+      setTimeout(() => setDistributeStatus(null), 5000);
+    } catch (error: any) {
+      console.error(error);
+      showStatus(error.message || "Failed to distribute ROI", "error");
+      setDistributeStatus("Error: Failed to distribute ROI.");
+    } finally {
+      setDistributing(false);
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     if (!deleteChecked) return;
     try {
@@ -429,14 +449,46 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
 
       {/* Header & Tabs */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-        <div>
-          <h2 className="text-4xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
-            <span className="text-secondary">{BRAND_CONFIG.shortName}</span>{" "}
-            COMMAND
-          </h2>
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">
-            {BRAND_CONFIG.description}
-          </p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-4">
+          <div className="flex justify-between items-start w-full sm:w-auto gap-4">
+            <div>
+              <h2 className="text-4xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
+                <span className="text-secondary">{BRAND_CONFIG.shortName}</span>{" "}
+                COMMAND
+              </h2>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">
+                {BRAND_CONFIG.description}
+              </p>
+            </div>
+            <button 
+              onClick={onLogout}
+              className="xl:hidden p-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20"
+              title="Emergency Exit"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleDistributeROI}
+              disabled={distributing}
+              className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 text-primary rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-primary/20 transition-all disabled:opacity-50"
+            >
+              <RefreshCw
+                size={14}
+                className={distributing ? "animate-spin" : ""}
+              />
+              {distributing ? "Distributing..." : "Distribute Daily ROI"}
+            </button>
+            {distributeStatus && (
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest animate-pulse">
+                {distributeStatus}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-1 bg-darker p-1 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar w-full xl:w-auto">

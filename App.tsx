@@ -14,8 +14,39 @@ import InstallPrompt from './components/InstallPrompt';
 import { mockApi } from './lib/mockApi';
 import { BRAND_CONFIG } from './brandConfig';
 
+import { isAppwriteConfigured, APPWRITE_CONFIG } from './lib/appwrite';
+import { AlertTriangle, CheckCircle, Wifi, WifiOff } from 'lucide-react';
+
 const App: React.FC = () => {
-  console.log("App component mounted (Mock Mode)");
+  const [isLive, setIsLive] = useState(isAppwriteConfigured());
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  const checkConnection = useCallback(async () => {
+    if (isLive) {
+      try {
+        // Use account.get() via mockApi for more reliable connection check
+        await mockApi.auth.getCurrentUser();
+        setConnectionError(null);
+      } catch (e: any) {
+        console.error("Connection check failed:", e);
+        // Only show error if it's a network failure (Failed to fetch)
+        if (e.message?.includes('Failed to fetch') || e.message?.includes('Network Error')) {
+          setConnectionError("Cannot reach Appwrite. Please add Hostname to 'Platforms' in Appwrite Console.");
+        } else {
+          // If we got a different error (like 401), the server IS reachable
+          setConnectionError(null);
+        }
+      }
+    }
+  }, [isLive]);
+
+  useEffect(() => {
+    checkConnection();
+    
+    // Periodic check every 2 minutes
+    const interval = setInterval(checkConnection, 120000);
+    return () => clearInterval(interval);
+  }, [checkConnection]);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('spiral_user');
     return saved ? JSON.parse(saved) : null;
@@ -95,18 +126,19 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    console.log("🚀 Initializing Logout Sequence...");
     try {
-      await mockApi.auth.signOut();
+      // Clear local state immediately for better UX
       setCurrentUser(null);
       setWallet({ id: '', user_id: '', balance: 0, total_earned: 0, total_withdrawn: 0 });
       setActiveTab('dashboard');
       localStorage.removeItem('spiral_user');
+      
+      // Attempt server-side sign out
+      await mockApi.auth.signOut();
+      console.log("✅ Logout Successful");
     } catch (e) {
-      console.error("Logout failed", e);
-      // Fallback
-      setCurrentUser(null);
-      setWallet({ id: '', user_id: '', balance: 0, total_earned: 0, total_withdrawn: 0 });
-      localStorage.removeItem('spiral_user');
+      console.error("⚠️ Logout API call failed, but local session cleared", e);
     }
   };
 
@@ -136,13 +168,13 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard user={currentUser} wallet={wallet} pools={pools} onExchangerNav={navigateToExchanger} onNavigate={setActiveTab} />;
+      case 'dashboard': return <Dashboard user={currentUser} wallet={wallet} pools={pools} onExchangerNav={navigateToExchanger} onNavigate={setActiveTab} isLive={isLive} />;
       case 'matrix': return <MatrixTree user={currentUser} />;
       case 'pools': return <AutoPools user={currentUser} />;
       case 'exchanger': return <Exchanger user={currentUser} wallet={wallet} initialSubTab={exchangerSubTab} />;
       case 'tasks': return <TaskCenter user={currentUser} wallet={wallet} />;
       case 'income': return <IncomeDetails user={currentUser} />;
-      case 'admin': return isUserAdmin ? <AdminPanel user={currentUser} /> : <Dashboard user={currentUser} wallet={wallet} pools={pools} onExchangerNav={navigateToExchanger} onNavigate={setActiveTab} />;
+      case 'admin': return isUserAdmin ? <AdminPanel user={currentUser} onLogout={handleLogout} /> : <Dashboard user={currentUser} wallet={wallet} pools={pools} onExchangerNav={navigateToExchanger} onNavigate={setActiveTab} />;
       default: return <Dashboard user={currentUser} wallet={wallet} pools={pools} onExchangerNav={navigateToExchanger} onNavigate={setActiveTab} />;
     }
   };
@@ -150,7 +182,19 @@ const App: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-darker text-slate-100 font-sans overflow-hidden">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole={currentUser.role as any} onLogout={handleLogout} />
-      <main className="flex-1 flex flex-col relative overflow-y-auto custom-scrollbar">
+      <main className="flex-1 flex flex-col relative overflow-y-auto overflow-x-hidden custom-scrollbar">
+        {connectionError && (
+          <div className="bg-red-500/10 border-b border-red-500/20 p-2 text-center text-xs text-red-400 flex items-center justify-center gap-2 z-50">
+            <AlertTriangle size={14} />
+            <span>{connectionError}</span>
+            <button 
+              onClick={checkConnection} 
+              className="underline hover:text-red-300 ml-2 font-bold"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         <header className={`sticky top-0 z-40 glass border-b border-white/5 px-6 py-4 flex justify-between items-center transition-all`}>
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent uppercase tracking-tighter truncate">

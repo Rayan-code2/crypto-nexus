@@ -17,13 +17,14 @@ interface DashboardProps {
   pools?: any[];
   onNavigate?: (tab: string) => void;
   onExchangerNav?: (subTab: 'topup' | 'withdraw' | 'swap') => void;
+  isLive?: boolean;
 }
 
 const sparkData = [
   { v: 40 }, { v: 35 }, { v: 55 }, { v: 45 }, { v: 70 }, { v: 65 }, { v: 85 }
 ];
 
-const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavigate, onExchangerNav }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavigate, onExchangerNav, isLive }) => {
   const [copied, setCopied] = useState(false);
   const [liveBalance, setLiveBalance] = useState(wallet.balance);
   const [livePoolROI, setLivePoolROI] = useState(wallet.pool_roi_earned || 0);
@@ -106,41 +107,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 pb-10">
+    <div className="space-y-4 animate-in fade-in zoom-in-95 duration-500 pb-10">
       
-      {/* TICKER */}
-      <div className="w-full overflow-hidden bg-primary/5 border-y border-white/5 py-2 -mx-6 px-6 mb-2 backdrop-blur-sm sticky top-[68px] z-30">
-        <div className="flex whitespace-nowrap animate-marquee gap-12 text-[9px] font-black uppercase tracking-widest text-primary/80">
+      {/* TICKER - OPTIMIZED WITH FADE EDGES */}
+      <div className="w-[calc(100%+2rem)] -mx-4 sm:w-[calc(100%+3rem)] sm:-mx-6 overflow-hidden bg-primary/5 border-y border-white/5 py-2 mb-0 backdrop-blur-sm sticky top-[68px] z-30 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+        <div className="flex whitespace-nowrap animate-marquee gap-12 text-[9px] font-black uppercase tracking-widest text-primary/80 px-4 sm:px-6">
           <span>{marqueeText}</span>
           <span>{marqueeText}</span>
         </div>
       </div>
-
-      {/* ADMIN COMMAND CENTER QUICK ACCESS */}
-      {isAdmin && (
-        <section className="animate-in slide-in-from-top duration-700">
-           <div className="glass p-6 rounded-[2rem] border-red-500/30 bg-red-500/5 relative overflow-hidden">
-              <div className="absolute top-[-20%] right-[-5%] w-40 h-40 bg-red-500/10 blur-[60px] rounded-full"></div>
-              <div className="flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
-                 <div>
-                    <h3 className="text-xl font-black text-red-500 uppercase italic tracking-tighter">System Commander</h3>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Global Protocol Access Level 0 Verified</p>
-                 </div>
-                 <div className="flex flex-wrap justify-center gap-3">
-                    <button onClick={() => onNavigate?.('admin')} className="px-6 py-3 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-red-500/20 hover:scale-105 transition-all">
-                       Open Control Room
-                    </button>
-                    <button onClick={() => onNavigate?.('admin')} className="px-6 py-3 bg-white/5 border border-white/10 text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
-                       Manage Users
-                    </button>
-                    <button onClick={() => onNavigate?.('admin')} className="px-6 py-3 bg-white/5 border border-white/10 text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
-                       Update Rates
-                    </button>
-                 </div>
-              </div>
-           </div>
-        </section>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
@@ -162,7 +137,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
 
             <div className="relative z-10 my-4">
               <div className="flex justify-between items-center mb-1">
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Live Vault Balance</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Live Vault Balance</p>
+                  {isLive && (
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[7px] font-black animate-pulse">
+                      LIVE
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-3">
                   {wallet.hold_balance > 0 && (
                     <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
@@ -221,8 +203,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
           {/* MAIN STATS GRID - OPTIMIZED */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
             {[
-              { label: 'Wallet ROI', value: `$${liveWalletROI.toFixed(4)}`, trend: '0.20%', color: 'text-cyan-400', sparkColor: '#22d3ee' },
-              { label: 'Pool ROI', value: `$${livePoolROI.toFixed(4)}`, trend: '0.50%', color: 'text-amber-400', sparkColor: '#fbbf24' },
+              { label: 'Wallet ROI', value: `$${liveWalletROI.toFixed(2)}`, trend: '0.20%', color: 'text-cyan-400', sparkColor: '#22d3ee' },
+              { label: 'Pool ROI', value: `$${livePoolROI.toFixed(2)}`, trend: '0.50%', color: 'text-amber-400', sparkColor: '#fbbf24' },
               { label: 'Direct Income', value: `$${(wallet.direct_income || 0).toFixed(2)}`, trend: 'Active', color: 'text-secondary', sparkColor: '#a855f7' },
               { label: 'Level Income', value: `$${(wallet.level_income || 0).toFixed(2)}`, trend: 'Network', color: 'text-green-400', sparkColor: '#10b981' },
             ].map((stat, i) => (
@@ -471,6 +453,32 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
 
           </div>
       </div>
+
+      {/* ADMIN COMMAND CENTER QUICK ACCESS */}
+      {isAdmin && (
+        <section className="animate-in slide-in-from-top duration-700">
+           <div className="glass p-6 rounded-[2rem] border-red-500/30 bg-red-500/5 relative overflow-hidden">
+              <div className="absolute top-[-20%] right-[-5%] w-40 h-40 bg-red-500/10 blur-[60px] rounded-full"></div>
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
+                 <div>
+                    <h3 className="text-xl font-black text-red-500 uppercase italic tracking-tighter">System Commander</h3>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Global Protocol Access Level 0 Verified</p>
+                 </div>
+                 <div className="flex flex-wrap justify-center gap-3">
+                    <button onClick={() => onNavigate?.('admin')} className="px-6 py-3 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-red-500/20 hover:scale-105 transition-all">
+                       Open Control Room
+                    </button>
+                    <button onClick={() => onNavigate?.('admin')} className="px-6 py-3 bg-white/5 border border-white/10 text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
+                       Manage Users
+                    </button>
+                    <button onClick={() => onNavigate?.('admin')} className="px-6 py-3 bg-white/5 border border-white/10 text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
+                       Update Rates
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </section>
+      )}
 
       <style>{`
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }

@@ -156,6 +156,9 @@ export const appwriteService = {
         return { ...wallet, id: wallet.$id };
       } catch (error: any) {
         console.error("Appwrite getWallet error:", error);
+        if (error.message === 'Failed to fetch') {
+          throw new Error("Network Error: Could not connect to Appwrite. Please check if your endpoint is correct and if you have added your domain to Appwrite Platforms.");
+        }
         if (error.message?.includes('Unknown attribute')) {
           const attr = error.message.match(/"([^"]+)"/)?.[1] || "balance";
           throw new Error(`Appwrite Schema Error: Please add '${attr}' (Float/Double) attribute to your 'wallets' collection.`);
@@ -317,6 +320,9 @@ export const appwriteService = {
         );
       } catch (error: any) {
         console.error("Appwrite updateWallet error:", error);
+        if (error.message?.includes('not authorized') || error.message?.includes('Permission denied')) {
+          throw new Error("Appwrite Permission Error: Admin does not have 'Update' permission for the 'wallets' collection. Please set 'Any' or 'Users' permissions in Appwrite Console.");
+        }
         throw error;
       }
     },
@@ -453,6 +459,35 @@ export const appwriteService = {
 
     distributeROI: async (userId: string) => {
       try {
+        if (userId === "admin-trigger") {
+          console.log("🚀 Starting Global ROI Distribution...");
+          // Fetch all wallets
+          const walletsRes = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.wallets!,
+            [Query.limit(1000)] // Adjust limit if needed
+          );
+
+          console.log(`Found ${walletsRes.documents.length} wallets to process.`);
+
+          let successCount = 0;
+          let failCount = 0;
+          for (const walletDoc of walletsRes.documents) {
+            try {
+              await appwriteService.db.distributeROI(walletDoc.user_id);
+              successCount++;
+              if (successCount % 10 === 0) {
+                console.log(`Progress: ${successCount} wallets processed...`);
+              }
+            } catch (e) {
+              failCount++;
+              console.error(`Failed to distribute ROI for user ${walletDoc.user_id}:`, e);
+            }
+          }
+          console.log(`✅ Global ROI Distribution completed. Success: ${successCount}, Failed: ${failCount}`);
+          return { success: true, count: successCount, failed: failCount };
+        }
+
         const wallet = await appwriteService.db.getWallet(userId) as any as Wallet & { $id: string };
         if (!wallet) return;
 
@@ -467,29 +502,33 @@ export const appwriteService = {
         if (diffHoursROI >= 24) {
           const days = Math.floor(diffHoursROI / 24);
           const dailyRate = 0.002; // 0.20%
-          const roi = parseFloat(((wallet.balance || 0) * dailyRate * days).toFixed(4));
+          const roi = Number(((wallet.balance || 0) * dailyRate * days).toFixed(4));
           
           if (roi > 0) {
-            updateData.balance = parseFloat(((wallet.balance || 0) + roi).toFixed(4));
-            updateData.total_earned = parseFloat(((wallet.total_earned || 0) + roi).toFixed(4));
-            updateData.wallet_roi_earned = parseFloat(((wallet.wallet_roi_earned || 0) + roi).toFixed(4));
-            updateData.roi_earned = parseFloat(((wallet.roi_earned || 0) + roi).toFixed(4));
+            updateData.balance = Number(((wallet.balance || 0) + roi).toFixed(4));
+            updateData.total_earned = Number(((wallet.total_earned || 0) + roi).toFixed(4));
+            updateData.wallet_roi_earned = Number(((wallet.wallet_roi_earned || 0) + roi).toFixed(4));
+            updateData.roi_earned = Number(((wallet.roi_earned || 0) + roi).toFixed(4));
             updateData.last_roi_at = new Date().toISOString();
             walletUpdated = true;
 
             // Log transaction
-            await databases.createDocument(
-              APPWRITE_CONFIG.databaseId!,
-              APPWRITE_CONFIG.collections.transactions!,
-              ID.unique(),
-              {
-                user_id: userId,
-                type: 'roi',
-                amount: roi,
-                status: 'completed',
-                created_at: new Date().toISOString()
-              }
-            );
+            try {
+              await databases.createDocument(
+                APPWRITE_CONFIG.databaseId!,
+                APPWRITE_CONFIG.collections.transactions!,
+                ID.unique(),
+                {
+                  user_id: userId,
+                  type: 'roi',
+                  amount: roi,
+                  status: 'completed',
+                  created_at: new Date().toISOString()
+                }
+              );
+            } catch (e) {
+              console.error(`Failed to log ROI transaction for user ${userId}`, e);
+            }
           }
         }
 
@@ -507,28 +546,32 @@ export const appwriteService = {
 
           if (diffHoursPool >= 24) {
             const days = Math.floor(diffHoursPool / 24);
-            const poolROI = parseFloat((10 * 0.005 * days).toFixed(4)); // 0.5% of $10
+            const poolROI = Number((10 * 0.005 * days).toFixed(4)); // 0.5% of $10
 
             if (poolROI > 0) {
-              updateData.balance = parseFloat(((updateData.balance || wallet.balance || 0) + poolROI).toFixed(4));
-              updateData.total_earned = parseFloat(((updateData.total_earned || wallet.total_earned || 0) + poolROI).toFixed(4));
-              updateData.pool_roi_earned = parseFloat(((wallet.pool_roi_earned || 0) + poolROI).toFixed(4));
+              updateData.balance = Number(((updateData.balance || wallet.balance || 0) + poolROI).toFixed(4));
+              updateData.total_earned = Number(((updateData.total_earned || wallet.total_earned || 0) + poolROI).toFixed(4));
+              updateData.pool_roi_earned = Number(((wallet.pool_roi_earned || 0) + poolROI).toFixed(4));
               updateData.last_pool_roi_at = new Date().toISOString();
               walletUpdated = true;
 
               // Log transaction
-              await databases.createDocument(
-                APPWRITE_CONFIG.databaseId!,
-                APPWRITE_CONFIG.collections.transactions!,
-                ID.unique(),
-                {
-                  user_id: userId,
-                  type: 'roi',
-                  amount: poolROI,
-                  status: 'completed',
-                  created_at: new Date().toISOString()
-                }
-              );
+              try {
+                await databases.createDocument(
+                  APPWRITE_CONFIG.databaseId!,
+                  APPWRITE_CONFIG.collections.transactions!,
+                  ID.unique(),
+                  {
+                    user_id: userId,
+                    type: 'roi',
+                    amount: poolROI,
+                    status: 'completed',
+                    created_at: new Date().toISOString()
+                  }
+                );
+              } catch (e) {
+                console.error(`Failed to log Pool ROI transaction for user ${userId}`, e);
+              }
             }
           }
         }
@@ -544,8 +587,11 @@ export const appwriteService = {
         }
 
         return wallet;
-      } catch (error) {
+      } catch (error: any) {
         console.error("ROI Distribution Error:", error);
+        if (error.message === 'Failed to fetch') {
+          console.error("❌ ROI Distribution failed due to network error. Check Appwrite endpoint/CORS.");
+        }
         // Don't throw, just log so it doesn't block other operations
       }
     },
@@ -614,6 +660,9 @@ export const appwriteService = {
         await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId, { is_active: true });
       } catch (e: any) {
         console.error("Failed to set is_active: true", e);
+        if (e.message?.includes('not authorized') || e.message?.includes('Permission denied')) {
+          throw new Error("Appwrite Permission Error: Your account or the Admin does not have 'Update' permission for the 'users' collection.");
+        }
         throw new Error(`Activation failed: Could not update user status. ${e.message}`);
       }
       

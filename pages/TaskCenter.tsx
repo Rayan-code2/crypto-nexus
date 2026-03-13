@@ -11,6 +11,13 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
   const [proofs, setProofs] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'available' | 'history'>('available');
 
+  const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const showStatus = (text: string, type: 'success' | 'error' = 'success') => {
+    setStatusMsg({ text, type });
+    setTimeout(() => setStatusMsg(null), 5000);
+  };
+
   const fetchData = async () => {
     try {
       const [taskData, subData] = await Promise.all([
@@ -33,13 +40,13 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
   const handleSubmitProof = async (taskId: string) => {
     const proof = proofs[taskId];
     if (!proof || proof.trim().length < 3) {
-      alert("Please provide a valid proof (Username or Link)");
+      showStatus("Please provide a valid proof (Username or Link)", "error");
       return;
     }
 
     try {
       await mockApi.db.submitTask(user.id, taskId, proof);
-      alert("Proof submitted for verification!");
+      showStatus("Proof submitted for verification!");
       setProofs(prev => {
         const next = { ...prev };
         delete next[taskId];
@@ -47,7 +54,7 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
       });
       fetchData();
     } catch (e) {
-      alert("Submission failed.");
+      showStatus("Submission failed.", "error");
     }
   };
 
@@ -58,6 +65,13 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
 
   return (
     <div className="space-y-8 animate-in zoom-in duration-500">
+      {statusMsg && (
+        <div className={`fixed top-24 right-6 z-50 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl animate-in fade-in slide-in-from-right-4 ${
+          statusMsg.type === 'success' ? 'bg-secondary text-white' : 'bg-red-500 text-white'
+        }`}>
+          {statusMsg.text}
+        </div>
+      )}
       <div className="relative overflow-hidden p-8 bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl border border-indigo-500/30">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-center md:text-left">
