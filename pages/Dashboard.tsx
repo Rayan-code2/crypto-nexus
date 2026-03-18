@@ -2,14 +2,21 @@
 import React, { useState, useMemo } from 'react';
 import { User, Wallet, Transaction } from '../types';
 import { mockApi } from '../lib/mockApi';
+<<<<<<< HEAD
 import { POOL_NAMES } from '../constants';
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, AreaChart, Area, LineChart, Line 
 } from 'recharts';
 import { 
   ArrowDownCircle, ArrowUpCircle, RefreshCcw, UserPlus, 
+<<<<<<< HEAD
   Zap, Shield, Globe, Cpu, Trophy 
+=======
+  Zap, Shield, Globe, Cpu 
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -31,9 +38,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
   const [livePoolROI, setLivePoolROI] = useState(wallet.pool_roi_earned || 0);
   const [liveWalletROI, setLiveWalletROI] = useState(wallet.wallet_roi_earned || 0);
   const [marqueeText, setMarqueeText] = useState('⚡ NODE ACTIVE: SYSTEM ONLINE | 💎 USDT/INR: ₹92.45 (+0.4%) | 🔥 NETWORK VOLUME: $4.2M | 🚀 NEW POOL 5 ENTRY FROM ID #8291');
+<<<<<<< HEAD
   const [hallOfFameMarquee, setHallOfFameMarquee] = useState('🏆 CONGRATULATIONS TO OUR ELITE ACHIEVERS! KEEP PUSHING FOR THE TOP! 🚀');
   const [weeklyOffer, setWeeklyOffer] = useState<any>(null);
   const [weeklyAchievers, setWeeklyAchievers] = useState<any[]>([]);
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   const isAdmin = user.role?.toLowerCase() === 'admin';
   
   const activePool = useMemo(() => 
@@ -50,6 +60,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
   React.useEffect(() => {
     const fetchSettings = async () => {
       try {
+<<<<<<< HEAD
         const settings = await mockApi.db.getSettings() as any;
         if (settings && settings.marquee_text) {
           setMarqueeText(settings.marquee_text);
@@ -57,6 +68,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
         if (settings && settings.hall_of_fame_marquee) {
           setHallOfFameMarquee(settings.hall_of_fame_marquee);
         }
+=======
+        const settings = await mockApi.db.getSettings();
+        if (settings && settings.marquee_text) {
+          setMarqueeText(settings.marquee_text);
+        }
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       } catch (e) {
         console.error("Failed to fetch marquee settings", e);
       }
@@ -64,6 +81,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
     fetchSettings();
   }, []);
 
+<<<<<<< HEAD
   // Fetch Weekly Offer & Achievers
   React.useEffect(() => {
     const fetchOfferData = async () => {
@@ -81,6 +99,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
     fetchOfferData();
   }, []);
 
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   // Real-time Balance Growth Ticker (Dual ROI)
   React.useEffect(() => {
     const walletDailyRate = 0.002; // 0.20%
@@ -143,6 +163,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
+<<<<<<< HEAD
         {/* HERO CARD - GLOSSY THEMED VAULT */}
         <section className="lg:col-span-7 relative group">
           <div className="relative overflow-hidden rounded-[3rem] p-8 sm:p-10 bg-darker border border-primary/20 shadow-[0_0_40px_rgba(6,182,212,0.15)] min-h-[320px] flex flex-col justify-between transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_60px_rgba(6,182,212,0.25)]">
@@ -260,6 +281,64 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                     <span className="text-[6px] font-bold text-slate-600 uppercase tracking-widest truncate">Protocol: Secure</span>
                   </div>
                 </div>
+=======
+        {/* HERO CARD */}
+        <section className="lg:col-span-7 relative">
+          <div className="relative overflow-hidden rounded-[2.5rem] p-6 sm:p-8 bg-gradient-to-br from-slate-900 via-darker to-slate-900 border border-white/10 shadow-2xl min-h-[220px] flex flex-col justify-between group">
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-[100px] rounded-full group-hover:bg-primary/30 transition-all"></div>
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/20 blur-[100px] rounded-full"></div>
+            
+            <div className="flex justify-between items-start relative z-10">
+              <div>
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1">Elite Spiral Voyager</p>
+                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Agent {user.email.split('@')[0]}</h2>
+              </div>
+              <div className="w-12 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-md opacity-80 flex items-center justify-center shadow-lg">
+                <div className="w-8 h-6 border border-black/20 rounded-sm"></div>
+              </div>
+            </div>
+
+            <div className="relative z-10 my-4">
+              <div className="flex justify-between items-center mb-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Live Vault Balance</p>
+                  {isLive && (
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[7px] font-black animate-pulse">
+                      LIVE
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {wallet.hold_balance > 0 && (
+                    <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                      <span className="text-[7px] font-black text-amber-500 uppercase tracking-widest">Held for Pool: ${wallet.hold_balance}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Growth Active</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black tracking-tighter text-white">${liveBalance?.toFixed(6) || '0.000000'}</span>
+                <span className="text-primary font-black text-xs uppercase tracking-widest">USDT</span>
+              </div>
+              <p className="text-[8px] text-slate-600 font-bold uppercase mt-1">Daily Yield: 0.20% (Auto-Compounding)</p>
+            </div>
+
+            <div className="flex justify-between items-end relative z-10">
+              <div className="font-mono text-[10px] text-slate-500 tracking-[0.2em]">
+                {user.id.toUpperCase().slice(0, 4)} •••• •••• {user.id.toUpperCase().slice(-4)}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${user.is_active ? 'bg-primary/20' : 'bg-red-500/20'}`}>
+                  <div className={`w-2 h-2 rounded-full ${user.is_active ? 'bg-primary animate-pulse' : 'bg-red-500'}`}></div>
+                </div>
+                <span className={`text-[10px] font-black uppercase ${user.is_active ? 'text-primary' : 'text-red-500'}`}>
+                  {user.is_active ? 'Active Node' : 'Inactive Node'}
+                </span>
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               </div>
             </div>
           </div>
@@ -296,7 +375,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
               <div 
                 key={i} 
                 onClick={() => onNavigate?.('income')}
+<<<<<<< HEAD
                 className="bg-slate-900/60 p-4 rounded-3xl border border-white/5 relative overflow-hidden group hover:bg-slate-800/80 transition-all cursor-pointer will-change-transform text-center"
+=======
+                className="bg-slate-900/60 p-4 rounded-3xl border border-white/5 relative overflow-hidden group hover:bg-slate-800/80 transition-all cursor-pointer will-change-transform"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               >
                 <h3 className="text-slate-500 text-[8px] font-black uppercase tracking-[0.2em] mb-1">{stat.label}</h3>
                 <p className={`text-lg font-black tracking-tighter ${stat.color}`}>{stat.value}</p>
@@ -306,6 +389,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
           </div>
         </section>
 
+<<<<<<< HEAD
         {/* WEEKLY OFFER WALL - THEME-ALIGNED PREMIUM DESIGN */}
         <div className="lg:col-span-5 flex flex-col gap-6">
             <div className="relative group overflow-hidden rounded-[2.5rem] p-0 bg-slate-900/40 border border-white/5 shadow-xl shadow-primary/5 transition-all duration-700 hover:shadow-[0_0_80px_rgba(6,182,212,0.15)]">
@@ -476,6 +560,97 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                           </div>
                         </div>
                       ))}
+=======
+          {/* EVOLUTION STATUS CARD - REDESIGNED */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <div className="relative group overflow-hidden rounded-[2.5rem] p-8 bg-slate-900/60 border border-white/5 backdrop-blur-md will-change-transform">
+              {/* Background Decorative Elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 blur-[60px] rounded-full group-hover:bg-secondary/20 transition-all duration-700"></div>
+              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/5 blur-[80px] rounded-full"></div>
+              
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h3 className="text-white text-xs font-black uppercase tracking-[0.4em] mb-1">Evolution Protocol</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                      <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest">System Sync: 98.4%</p>
+                    </div>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+                    <span className="text-[10px] font-black text-secondary italic">TIER 04</span>
+                    <div className="w-[1px] h-3 bg-white/10"></div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Elite</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-8">
+                  {/* Futuristic Progress Ring */}
+                  <div className="relative w-32 h-32 flex-shrink-0">
+                    <svg className="w-full h-full transform -rotate-90">
+                      {/* Outer Glow Ring */}
+                      <circle cx="64" cy="64" r="58" stroke="rgba(168,85,247,0.05)" strokeWidth="8" fill="transparent" />
+                      {/* Background Track */}
+                      <circle cx="64" cy="64" r="52" stroke="rgba(255,255,255,0.03)" strokeWidth="12" fill="transparent" />
+                      {/* Segmented Progress */}
+                      <circle 
+                        cx="64" cy="64" r="52" 
+                        stroke="url(#grad-evolution)" 
+                        strokeWidth="12" 
+                        fill="transparent" 
+                        strokeDasharray="326.7" 
+                        strokeDashoffset="81.6" 
+                        strokeLinecap="round"
+                        className="drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                      />
+                      <defs>
+                        <linearGradient id="grad-evolution" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#a855f7" />
+                          <stop offset="100%" stopColor="#06b6d4" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-black text-white italic tracking-tighter leading-none">75<span className="text-xs text-secondary">%</span></span>
+                      <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-1">Sync Rate</span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 w-full space-y-5">
+                    <div>
+                      <p className="text-2xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-500 uppercase leading-none mb-1">Spiral Voyager</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Next Phase:</span>
+                        <span className="text-[10px] font-black text-secondary uppercase tracking-widest italic">Spiral Prime</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-500">
+                        <span>XP Progress</span>
+                        <span className="text-white">1,250 / 2,000 XP</span>
+                      </div>
+                      <div className="h-2 w-full bg-white/5 rounded-full p-[2px] border border-white/5">
+                        <div className="h-full bg-gradient-to-r from-secondary to-primary rounded-full w-[75%] relative">
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white shadow-[0_0_10px_#fff] rounded-full"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="flex-1 bg-white/5 rounded-xl p-2 border border-white/5 text-center">
+                        <p className="text-[7px] font-bold text-slate-500 uppercase mb-0.5">Directs</p>
+                        <p className="text-xs font-black text-white">{user.direct_count || 0}</p>
+                      </div>
+                      <div className="flex-1 bg-white/5 rounded-xl p-2 border border-white/5 text-center">
+                        <p className="text-[7px] font-bold text-slate-500 uppercase mb-0.5">Network</p>
+                        <p className="text-xs font-black text-white">1.2K</p>
+                      </div>
+                      <div className="flex-1 bg-white/5 rounded-xl p-2 border border-white/5 text-center">
+                        <p className="text-[7px] font-bold text-slate-500 uppercase mb-0.5">Uptime</p>
+                        <p className="text-xs font-black text-white">14D</p>
+                      </div>
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                     </div>
                   </div>
                 </div>
@@ -548,6 +723,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
               </div>
             )}
 
+<<<<<<< HEAD
             {/* POOL PROGRESS TREE VIEW - MLM INSPIRED STYLE */}
             {user.is_qualified && activePool && (
               <div className={`glass rounded-[2.5rem] p-6 relative overflow-hidden transition-all duration-300 ${
@@ -645,6 +821,51 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                           </div>
                           <span className={`text-[7px] font-black uppercase tracking-widest mt-1 ${isFilled ? activePool.pool_number === 1 ? 'text-amber-500' : 'text-primary' : 'text-slate-700'}`}>
                             Lvl {i + 1}
+=======
+            {/* POOL PROGRESS TREE VIEW */}
+            {user.is_qualified && activePool && (
+              <div className="glass rounded-[2.5rem] p-6 border-primary/20 bg-primary/5 relative overflow-hidden">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">Pool {activePool.pool_number} Voyager</h3>
+                    <p className="text-slate-500 text-[8px] font-bold uppercase tracking-widest mt-1">Global FIFO Matrix</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                      {activePool.members_count} / {activePool.pool_number === 1 ? 4 : 6}
+                    </span>
+                    <p className="text-[8px] text-primary font-black uppercase tracking-widest">Members Filled</p>
+                  </div>
+                </div>
+
+                {/* Visual Tree/Slots */}
+                <div className="flex flex-col items-center gap-6 py-4">
+                  {/* User Node */}
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary p-[2px] shadow-lg shadow-primary/20">
+                      <div className="w-full h-full bg-darker rounded-full flex items-center justify-center font-black text-xs text-primary italic">
+                        YOU
+                      </div>
+                    </div>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-[2px] h-6 bg-gradient-to-b from-primary/50 to-transparent"></div>
+                  </div>
+
+                  {/* Member Slots */}
+                  <div className="flex flex-wrap justify-center gap-4 mt-2">
+                    {Array.from({ length: activePool.pool_number === 1 ? 4 : 6 }).map((_, i) => {
+                      const isFilled = i < activePool.members_count;
+                      return (
+                        <div key={i} className="flex flex-col items-center gap-2">
+                          <div className={`w-8 h-8 rounded-full border-2 transition-all duration-500 ${isFilled ? 'border-primary bg-primary/20 shadow-lg shadow-primary/20' : 'border-white/5 bg-white/5'}`}>
+                            {isFilled && (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-primary">
+                                ✓
+                              </div>
+                            )}
+                          </div>
+                          <span className={`text-[8px] font-black uppercase tracking-widest ${isFilled ? 'text-primary' : 'text-slate-700'}`}>
+                            Slot {i + 1}
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                           </span>
                         </div>
                       );
@@ -652,6 +873,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                   </div>
                 </div>
 
+<<<<<<< HEAD
                 {/* BOTTOM REWARD SECTION - MLM STYLE */}
                 <div className={`mt-8 pt-6 border-t relative z-10 ${activePool.pool_number === 1 ? 'border-amber-500/20' : 'border-white/5'}`}>
                   <div className="flex justify-between items-center">
@@ -675,6 +897,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                       }`}
                     >
                       Matrix View
+=======
+                <div className="mt-6 pt-6 border-t border-white/5">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-[8px] text-slate-500 uppercase font-black">Completion Reward</p>
+                      <p className="text-lg font-black text-white">
+                        {activePool.pool_number === 1 ? '$10 + Rebirth' : `$${(Math.pow(2, activePool.pool_number - 1) * 10 * 6 * 0.5).toFixed(0)} + Upgrade`}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => onNavigate?.('pools')}
+                      className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
+                    >
+                      View All Pools →
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                     </button>
                   </div>
                 </div>

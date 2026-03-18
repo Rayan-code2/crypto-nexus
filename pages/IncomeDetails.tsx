@@ -132,7 +132,11 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user }) => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'ROI Yield', value: stats.roi, color: 'text-cyan-400', icon: <TrendingUp size={16} />, bg: 'bg-cyan-400/10' },
+<<<<<<< HEAD
           { label: 'Pool Rewards', value: stats.pool, color: 'text-primary', icon: <Zap size={16} />, bg: 'bg-primary/10' },
+=======
+          { label: 'Pool Rewards', value: stats.pool, color: 'text-amber-400', icon: <Zap size={16} />, bg: 'bg-amber-400/10' },
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
           { label: 'Level Bonus', value: stats.level, color: 'text-secondary', icon: <Users size={16} />, bg: 'bg-secondary/10' },
           { label: 'Direct Bonus', value: stats.direct, color: 'text-green-400', icon: <ArrowUpRight size={16} />, bg: 'bg-green-400/10' },
         ].map((stat, i) => (
@@ -173,7 +177,11 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user }) => {
                 <div className="flex items-center gap-4">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-500 ${
                     tx.type === 'roi' ? 'bg-cyan-400/10 text-cyan-400' :
+<<<<<<< HEAD
                     (tx.type === 'pool' || tx.type === 'pool_payout') ? 'bg-primary/10 text-primary' :
+=======
+                    (tx.type === 'pool' || tx.type === 'pool_payout') ? 'bg-amber-400/10 text-amber-400' :
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                     tx.type === 'level' ? 'bg-secondary/10 text-secondary' :
                     'bg-green-400/10 text-green-400'
                   }`}>

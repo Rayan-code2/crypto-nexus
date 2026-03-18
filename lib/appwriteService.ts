@@ -124,8 +124,11 @@ export const appwriteService = {
   db: {
     getWallet: async (userId: string) => {
       try {
+<<<<<<< HEAD
         if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
         
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         const response = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId!,
           APPWRITE_CONFIG.collections.wallets!,
@@ -158,7 +161,11 @@ export const appwriteService = {
         return { ...wallet, id: wallet.$id };
       } catch (error: any) {
         console.error("Appwrite getWallet error:", error);
+<<<<<<< HEAD
         if (error.message === 'Failed to fetch' || error.message?.includes('Network Error')) {
+=======
+        if (error.message === 'Failed to fetch') {
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
           throw new Error("Network Error: Could not connect to Appwrite. Please check if your endpoint is correct and if you have added your domain to Appwrite Platforms.");
         }
         if (error.message?.includes('Unknown attribute')) {
@@ -170,6 +177,7 @@ export const appwriteService = {
     },
 
     getTasks: async () => {
+<<<<<<< HEAD
       try {
         if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
 
@@ -238,6 +246,41 @@ export const appwriteService = {
         }
         throw error;
       }
+=======
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.tasks!,
+        [Query.equal('is_active', true)]
+      );
+      return response.documents.map(doc => ({ ...doc, id: doc.$id }));
+    },
+
+    submitTask: async (userId: string, taskId: string, proof: string) => {
+      await databases.createDocument(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.submissions!,
+        ID.unique(),
+        {
+          user_id: userId,
+          task_id: taskId,
+          status: 'pending',
+          proof: proof
+        }
+      );
+    },
+
+    getTaskSubmissions: async (userId?: string) => {
+      const queries = userId ? [Query.equal('user_id', userId)] : [];
+      queries.push(Query.orderDesc('$createdAt'));
+      queries.push(Query.limit(100));
+      
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId!,
+        APPWRITE_CONFIG.collections.submissions!,
+        queries
+      );
+      return response.documents.map(doc => ({ ...doc, id: doc.$id }));
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     },
 
     approveTaskSubmission: async (submissionId: string, status: 'approved' | 'rejected') => {
@@ -496,8 +539,11 @@ export const appwriteService = {
 
     distributeROI: async (userId: string) => {
       try {
+<<<<<<< HEAD
         if (!isAppwriteConfigured()) return;
         
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         if (userId === "admin-trigger") {
           console.log("🚀 Starting Global ROI Distribution...");
           // Fetch all wallets
@@ -639,6 +685,7 @@ export const appwriteService = {
       try {
         const user = await databases.getDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId) as any;
         const wallet = await appwriteService.db.getWallet(userId) as any as Wallet;
+<<<<<<< HEAD
         const settings = await appwriteService.db.getSettings() as any;
         
         const depositFeePercent = settings.deposit_fee || 0;
@@ -646,11 +693,20 @@ export const appwriteService = {
         const netAmount = parseFloat(amount.toString()) - feeAmount;
 
         console.log(`Activating/Updating user ${userId} with amount ${amount}. Net amount after ${depositFeePercent}% fee: ${netAmount}`);
+=======
+
+        console.log(`Activating/Updating user ${userId} with amount ${amount}. Current status: ${user.is_active}`);
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 
         // Case 1: User is already active
         if (user.is_active) {
           const currentBalance = parseFloat((wallet.balance || 0).toString());
+<<<<<<< HEAD
           await appwriteService.db.updateWallet(userId, currentBalance + netAmount);
+=======
+          const addAmount = parseFloat(amount.toString());
+          await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
           
           // Log Transaction
           try {
@@ -661,7 +717,11 @@ export const appwriteService = {
               {
                 user_id: userId,
                 type: 'exchange',
+<<<<<<< HEAD
                 amount: netAmount,
+=======
+                amount: addAmount,
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 status: 'completed',
                 created_at: new Date().toISOString()
               }
@@ -675,7 +735,12 @@ export const appwriteService = {
         // Case 2: Inactive but amount < 10
         if (parseFloat(amount.toString()) < 10) {
           const currentBalance = parseFloat((wallet.balance || 0).toString());
+<<<<<<< HEAD
           await appwriteService.db.updateWallet(userId, currentBalance + netAmount);
+=======
+          const addAmount = parseFloat(amount.toString());
+          await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
           
           // Log Transaction
           try {
@@ -686,7 +751,11 @@ export const appwriteService = {
               {
                 user_id: userId,
                 type: 'exchange',
+<<<<<<< HEAD
                 amount: netAmount,
+=======
+                amount: addAmount,
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 status: 'completed',
                 created_at: new Date().toISOString()
               }
@@ -708,7 +777,11 @@ export const appwriteService = {
         throw new Error(`Activation failed: Could not update user status. ${e.message}`);
       }
       
+<<<<<<< HEAD
         const remainingBalance = netAmount - 10;
+=======
+        const remainingBalance = parseFloat(amount.toString()) - 10;
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         const currentBalance = parseFloat((wallet.balance || 0).toString());
 
         if (remainingBalance > 0) {
@@ -727,7 +800,11 @@ export const appwriteService = {
           {
             user_id: userId,
             type: 'exchange',
+<<<<<<< HEAD
             amount: netAmount,
+=======
+            amount: parseFloat(amount.toString()),
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
             status: 'completed',
             created_at: new Date().toISOString()
           }
@@ -1157,8 +1234,11 @@ export const appwriteService = {
 
     getSettings: async () => {
       try {
+<<<<<<< HEAD
         if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
         
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         const response = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId!,
           'setting'
@@ -1178,6 +1258,7 @@ export const appwriteService = {
               admin_address_bep20: '0x7hQ8w7X9...bep20_demo',
               admin_address_erc20: '0xERC20...erc20_demo',
               telegram_link: 'https://t.me/cryptospiral',
+<<<<<<< HEAD
               marquee_text: 'Welcome to Genesis Core - The Future of Matrix Ecosystem',
               min_deposit: 10,
               min_withdrawal: 20,
@@ -1187,6 +1268,8 @@ export const appwriteService = {
               weekly_reward: 50,
               weekly_description: 'Top 5 Achievers with 5+ Directs',
               hall_of_fame_marquee: '🏆 CONGRATULATIONS TO OUR ELITE ACHIEVERS! KEEP PUSHING FOR THE TOP! 🚀',
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               updated_at: new Date().toISOString()
             }
           );
@@ -1218,11 +1301,15 @@ export const appwriteService = {
         console.error("Appwrite updateSettings error:", error);
         if (error.message?.includes('Unknown attribute')) {
           const attr = error.message.split('"')[1] || 'unknown';
+<<<<<<< HEAD
           let typeHint = "String";
           if (['usdt_buy_rate', 'usdt_sell_rate', 'min_deposit', 'min_withdrawal', 'max_withdrawal', 'deposit_fee', 'withdrawal_fee', 'weekly_reward'].includes(attr)) {
             typeHint = "Float/Double";
           }
           throw new Error(`Appwrite Error: Attribute "${attr}" is missing in your "setting" collection. Please add it in Appwrite Console as a ${typeHint} (String for marquee_text, hall_of_fame_marquee).`);
+=======
+          throw new Error(`Appwrite Error: Attribute "${attr}" is missing in your "setting" collection. Please add it in Appwrite Console as a String (admin_address_trc20, admin_address_bep20, admin_address_erc20).`);
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         }
         throw error;
       }
@@ -1307,6 +1394,7 @@ export const appwriteService = {
         }
       }
       return repairedCount;
+<<<<<<< HEAD
     },
 
     resetWeeklyDirects: async () => {
@@ -1397,6 +1485,8 @@ export const appwriteService = {
           created_at: new Date().toISOString()
         }
       );
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     }
   }
 };

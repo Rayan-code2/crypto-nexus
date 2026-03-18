@@ -48,6 +48,7 @@ const InstallPrompt: React.FC = () => {
     <div className="fixed bottom-24 left-4 right-4 z-50 animate-in slide-in-from-bottom-10 duration-500">
       <div className="glass p-4 rounded-2xl border border-primary/30 shadow-2xl shadow-primary/20 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
+<<<<<<< HEAD
           <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center p-2">
             <img 
               src="https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a635305444d75633144c18f02626cc28e271cf0/128/color/usdt.png" 
@@ -59,6 +60,14 @@ const InstallPrompt: React.FC = () => {
           <div>
             <h4 className="text-[11px] font-black uppercase tracking-widest text-white italic">Download App</h4>
             <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-tight">Install CryptoSpiral for a faster experience</p>
+=======
+          <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary">
+            <Download size={20} />
+          </div>
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Install App</h4>
+            <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Use CryptoSpiral like a mobile app</p>
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
           </div>
         </div>
         

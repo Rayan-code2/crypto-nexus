@@ -7,9 +7,16 @@ import { BRAND_CONFIG } from '../brandConfig';
 
 interface LoginProps {
   onLogin: (user: User) => void;
+<<<<<<< HEAD
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
+=======
+  onDemoMode: () => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onLogin, onDemoMode }) => {
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [sponsorId, setSponsorId] = useState('');
@@ -126,10 +133,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <button 
               type="submit"
               disabled={loading}
+<<<<<<< HEAD
               className="w-full py-5 bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-primary font-black rounded-2xl transition-all shadow-xl shadow-primary/5 flex items-center justify-center gap-3 text-sm uppercase tracking-widest disabled:opacity-50 mt-4 group"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+=======
+              className="w-full py-5 bg-gradient-to-r from-primary to-cyan-500 hover:scale-[1.02] active:scale-95 text-darker font-black rounded-2xl transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-3 text-sm uppercase tracking-widest disabled:opacity-50 mt-4 group"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-darker border-t-transparent rounded-full animate-spin"></div>
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               ) : (
                 <>
                   <span>{isSignUp ? 'Sync New Node' : 'Establish Link'}</span>
@@ -149,7 +163,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   setIsSignUp(!isSignUp);
                   setError(null);
                 }}
+<<<<<<< HEAD
                 className="text-primary hover:text-primary/80 transition-colors border-b border-primary/20 font-black"
+=======
+                className="text-primary hover:text-cyan-300 transition-colors border-b border-primary/20 font-black"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               >
                 {isSignUp ? 'Sign In' : 'Register Now'}
               </button>

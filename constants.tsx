@@ -19,6 +19,7 @@ export const MLM_CONFIG = {
   USDT_SELL_RATE: 88,
 };
 
+<<<<<<< HEAD
 export const POOL_NAMES = [
   "Genesis Core",
   "Stellar Pulse",
@@ -32,6 +33,8 @@ export const POOL_NAMES = [
   "Omega Point"
 ];
 
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 export const Icons = {
   Dashboard: () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -71,11 +71,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
       </aside>
 
       {/* Mobile Tab Bar */}
+<<<<<<< HEAD
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-2xl border-t border-white/10 z-50 grid grid-cols-6 items-center py-3 px-1 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+=======
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-slate-800 z-50 flex justify-start gap-6 items-center px-6 py-3 overflow-x-auto no-scrollbar">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
+<<<<<<< HEAD
             className={`flex flex-col items-center gap-1 transition-all duration-300 ${
               activeTab === item.id ? 'text-primary scale-110' : 'text-slate-500 hover:text-slate-300'
             }`}
@@ -84,6 +89,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
               <item.icon />
             </div>
             <span className={`text-[8px] font-black whitespace-nowrap uppercase tracking-[0.1em] ${activeTab === item.id ? 'text-white' : 'text-slate-500'}`}>
+=======
+            className={`flex flex-col items-center gap-1 transition-colors min-w-fit ${
+              activeTab === item.id ? 'text-primary' : 'text-slate-500'
+            }`}
+          >
+            <item.icon />
+            <span className="text-[10px] font-bold whitespace-nowrap uppercase tracking-tighter">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               {item.id === 'dashboard' ? 'Home' : 
                item.id === 'matrix' ? 'Matrix' : 
                item.id === 'pools' ? 'Pools' : 
@@ -92,6 +105,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
             </span>
           </button>
         ))}
+<<<<<<< HEAD
+=======
+        <button
+          onClick={onLogout}
+          className="flex flex-col items-center gap-1 text-red-500 min-w-fit ml-auto"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span className="text-[10px] font-bold whitespace-nowrap uppercase tracking-tighter">Logout</span>
+        </button>
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       </nav>
     </>
   );

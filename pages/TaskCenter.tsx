@@ -19,7 +19,10 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
   };
 
   const fetchData = async () => {
+<<<<<<< HEAD
     if (!user?.id) return;
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     try {
       const [taskData, subData] = await Promise.all([
         mockApi.db.getTasks(),
@@ -38,8 +41,11 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
     fetchData();
   }, [user.id]);
 
+<<<<<<< HEAD
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
 
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   const handleSubmitProof = async (taskId: string) => {
     const proof = proofs[taskId];
     if (!proof || proof.trim().length < 3) {
@@ -47,7 +53,10 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
       return;
     }
 
+<<<<<<< HEAD
     setSubmitting(prev => ({ ...prev, [taskId]: true }));
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     try {
       await mockApi.db.submitTask(user.id, taskId, proof);
       showStatus("Proof submitted for verification!");
@@ -57,11 +66,16 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
         return next;
       });
       fetchData();
+<<<<<<< HEAD
     } catch (e: any) {
       console.error("Task submission error:", e);
       showStatus(e.message || "Submission failed.", "error");
     } finally {
       setSubmitting(prev => ({ ...prev, [taskId]: false }));
+=======
+    } catch (e) {
+      showStatus("Submission failed.", "error");
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     }
   };
 
@@ -167,6 +181,7 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
                   
                   <button 
                     onClick={() => handleSubmitProof(task.id)}
+<<<<<<< HEAD
                     disabled={submitting[task.id]}
                     className="w-full py-4 bg-secondary hover:bg-purple-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-secondary/20 uppercase tracking-widest text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
@@ -178,6 +193,11 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
                     ) : (
                       'Submit Mission Proof'
                     )}
+=======
+                    className="w-full py-4 bg-secondary hover:bg-purple-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-secondary/20 uppercase tracking-widest text-xs"
+                  >
+                    Submit Mission Proof
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   </button>
                 </div>
               </div>
@@ -197,7 +217,11 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
                     <div className={`p-3 rounded-2xl text-xl ${
                       sub.status === 'approved' ? 'bg-green-500/10 text-green-500' : 
                       sub.status === 'rejected' ? 'bg-red-500/10 text-red-500' : 
+<<<<<<< HEAD
                       'bg-primary/10 text-primary'
+=======
+                      'bg-amber-500/10 text-amber-500'
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                     }`}>
                       {sub.status === 'approved' ? '✓' : sub.status === 'rejected' ? '✕' : '⏳'}
                     </div>
@@ -216,7 +240,11 @@ const TaskCenter: React.FC<{ user: User; wallet: Wallet }> = ({ user, wallet }) 
                     <p className={`text-sm font-black uppercase tracking-widest ${
                       sub.status === 'approved' ? 'text-green-500' : 
                       sub.status === 'rejected' ? 'text-red-500' : 
+<<<<<<< HEAD
                       'text-primary'
+=======
+                      'text-amber-500'
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                     }`}>
                       {sub.status}
                     </p>

@@ -10,13 +10,20 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@tailwindcss/vite": "^4.2.1",
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     "appwrite": "^22.4.1",
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+<<<<<<< HEAD
     "recharts": "^3.7.0",
     "tailwindcss": "^4.2.1"
+=======
+    "recharts": "^3.7.0"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

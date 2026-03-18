@@ -12,13 +12,17 @@ export interface User {
   is_blocked: boolean;
   is_active: boolean;
   direct_count: number;
+<<<<<<< HEAD
   weekly_directs?: number;
   last_reward_week?: string;
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   is_qualified: boolean;
   role: UserRole;
   created_at: string;
 }
 
+<<<<<<< HEAD
 export interface WeeklyOffer {
   id: string;
   reward_amount: number;
@@ -35,6 +39,8 @@ export interface OfferAchiever {
   status: 'pending' | 'rewarded';
 }
 
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 export interface Wallet {
   id: string;
   user_id: string;
@@ -107,6 +113,7 @@ export interface TaskSubmission {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
 }
+<<<<<<< HEAD
 
 export interface Settings {
   id: string;
@@ -129,3 +136,5 @@ export interface Settings {
   hall_of_fame_marquee: string;
   updated_at: string;
 }
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2

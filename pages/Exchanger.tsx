@@ -1,7 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Copy, Check } from 'lucide-react';
+<<<<<<< HEAD
 import { User, Wallet, ExchangerRequest, Settings } from '../types';
+=======
+import { User, Wallet, ExchangerRequest } from '../types';
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 import { MLM_CONFIG } from '../constants';
 import { mockApi } from '../lib/mockApi';
 import { BRAND_CONFIG } from '../brandConfig';
@@ -37,9 +41,13 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
     adminAddressErc20: '0xERC20...erc20_demo',
     minDeposit: 10,
     minWithdrawal: 20,
+<<<<<<< HEAD
     maxWithdrawal: 1000,
     depositFee: 0,
     withdrawalFee: 1
+=======
+    maxWithdrawal: 1000
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   });
 
   const showStatus = (text: string, type: 'success' | 'error' = 'success') => {
@@ -52,7 +60,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
       const [historyData, walletData, settingsData] = await Promise.all([
         mockApi.db.getExchangeRequests(user.id),
         mockApi.db.getWallet(user.id),
+<<<<<<< HEAD
         mockApi.db.getSettings() as any
+=======
+        mockApi.db.getSettings()
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       ]);
       setHistory(historyData as any);
       setWallet(walletData as any);
@@ -67,9 +79,13 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
           adminAddressErc20: settingsData.admin_address_erc20 || '0xERC20...erc20_demo',
           minDeposit: settingsData.min_deposit || 10,
           minWithdrawal: settingsData.min_withdrawal || 20,
+<<<<<<< HEAD
           maxWithdrawal: settingsData.max_withdrawal || 1000,
           depositFee: settingsData.deposit_fee || 0,
           withdrawalFee: settingsData.withdrawal_fee || 0
+=======
+          maxWithdrawal: settingsData.max_withdrawal || 1000
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         });
       }
     } catch (e) {
@@ -104,8 +120,12 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
         hash_id: hashId,
         network: network,
         status: 'pending',
+<<<<<<< HEAD
         type: 'deposit',
         fee: rates.depositFee
+=======
+        type: 'deposit'
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       });
       
       console.log("Deposit success:", result);
@@ -131,8 +151,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
       return;
     }
     const withdrawVal = parseFloat(amount);
+<<<<<<< HEAD
     const calculatedFee = (withdrawVal * rates.withdrawalFee) / 100;
     
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     if (withdrawVal < rates.minWithdrawal) {
       showStatus(`Minimum withdrawal is $${rates.minWithdrawal} USDT`, 'error');
       return;
@@ -141,8 +164,13 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
       showStatus(`Maximum withdrawal is $${rates.maxWithdrawal} USDT`, 'error');
       return;
     }
+<<<<<<< HEAD
     if (withdrawVal + calculatedFee > wallet.balance) {
       showStatus('Insufficient balance (including fee)', 'error');
+=======
+    if (withdrawVal > wallet.balance) {
+      showStatus('Insufficient balance', 'error');
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       return;
     }
     setLoading(true);
@@ -153,12 +181,20 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
         address: address,
         network: network,
         status: 'pending',
+<<<<<<< HEAD
         type: 'withdraw',
         fee: calculatedFee
       });
       
       // Deduct balance immediately (amount + fee)
       await mockApi.db.updateWallet(user.id, wallet.balance - (parseFloat(amount) + calculatedFee));
+=======
+        type: 'withdraw'
+      });
+      
+      // Deduct balance immediately
+      await mockApi.db.updateWallet(user.id, wallet.balance - parseFloat(amount));
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       
       showStatus('Withdrawal request submitted successfully!');
       setAmount('');
@@ -273,10 +309,13 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
             />
             <span className="absolute right-6 top-1/2 -translate-y-1/2 text-primary font-black">USDT</span>
           </div>
+<<<<<<< HEAD
           <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest px-1 flex justify-between">
             <span>Min: ${rates.minDeposit} USDT</span>
             <span>Fee: {rates.depositFee}% (${((parseFloat(topupAmount) || 0) * rates.depositFee / 100).toFixed(2)})</span>
           </p>
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Transaction Hash ID</label>
@@ -305,8 +344,13 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
         )}
       </div>
 
+<<<<<<< HEAD
       <div className="bg-primary/10 border border-primary/20 p-4 rounded-2xl">
          <p className="text-[10px] text-primary font-bold leading-relaxed uppercase tracking-wider">
+=======
+      <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl">
+         <p className="text-[10px] text-amber-500 font-bold leading-relaxed uppercase tracking-wider">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
            ⚠️ IMPORTANT: Send only USDT to this address. Ensure you select the correct network ({network}). Deposits are usually credited after 3 network confirmations.
          </p>
       </div>
@@ -357,7 +401,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
           </div>
           <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest px-1 flex justify-between">
             <span>Balance: ${wallet?.balance?.toFixed(2) || '0.00'}</span>
+<<<<<<< HEAD
             <span>Fee: {rates.withdrawalFee}% (${((parseFloat(amount) || 0) * rates.withdrawalFee / 100).toFixed(2)})</span>
+=======
+            <span>Fee: $1.00 USDT</span>
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
           </p>
         </div>
         {!user.is_active && (
@@ -388,17 +436,29 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
 
   const renderSwap = () => (
     <div className="space-y-6 animate-in fade-in duration-500">
+<<<<<<< HEAD
       <div className="glass p-8 rounded-[2.5rem] space-y-6 border-primary/20">
           <div className="flex p-1 bg-slate-900 rounded-2xl">
             <button 
               onClick={() => setP2pType('buy')}
               className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${p2pType === 'buy' ? 'bg-primary text-darker' : 'text-slate-500'}`}
+=======
+      <div className="glass p-8 rounded-[2.5rem] space-y-6 border-amber-500/20">
+          <div className="flex p-1 bg-slate-900 rounded-2xl">
+            <button 
+              onClick={() => setP2pType('buy')}
+              className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${p2pType === 'buy' ? 'bg-amber-500 text-darker' : 'text-slate-500'}`}
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
             >
               Buy with INR
             </button>
             <button 
               onClick={() => setP2pType('sell')}
+<<<<<<< HEAD
               className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${p2pType === 'sell' ? 'bg-primary text-darker' : 'text-slate-500'}`}
+=======
+              className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${p2pType === 'sell' ? 'bg-amber-500 text-darker' : 'text-slate-500'}`}
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
             >
               Sell for INR
             </button>
@@ -413,15 +473,25 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
+<<<<<<< HEAD
                   className="w-full bg-slate-800 border-none rounded-2xl py-4 px-6 text-xl font-black outline-none ring-1 ring-slate-700 focus:ring-primary"
                 />
                 <span className="absolute right-6 top-1/2 -translate-y-1/2 text-primary font-black">USDT</span>
+=======
+                  className="w-full bg-slate-800 border-none rounded-2xl py-4 px-6 text-xl font-black outline-none ring-1 ring-slate-700 focus:ring-amber-500"
+                />
+                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-amber-500 font-black">USDT</span>
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               </div>
             </div>
 
             <div className="flex justify-center -my-2 relative z-10">
               <div className="bg-slate-900 p-2 rounded-full border border-white/10 shadow-lg rotate-90">
+<<<<<<< HEAD
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+=======
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
               </div>
@@ -442,7 +512,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
 
             <div className="p-4 bg-slate-900/50 rounded-2xl flex justify-between items-center text-[10px] font-black uppercase tracking-widest border border-white/5">
               <span className="text-slate-500">P2P Conversion Rate</span>
+<<<<<<< HEAD
               <span className="text-primary">1 USDT = ₹{rate}</span>
+=======
+              <span className="text-amber-500">1 USDT = ₹{rate}</span>
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
             </div>
 
             {p2pType === 'buy' && (
@@ -463,7 +537,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
                           setCopied('upi');
                           setTimeout(() => setCopied(null), 2000);
                         }}
+<<<<<<< HEAD
                         className={`p-2 rounded-lg transition-all ${copied === 'upi' ? 'bg-green-500/20 text-green-500' : 'bg-white/5 text-primary hover:bg-white/10'}`}
+=======
+                        className={`p-2 rounded-lg transition-all ${copied === 'upi' ? 'bg-green-500/20 text-green-500' : 'bg-white/5 text-amber-500 hover:bg-white/10'}`}
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                         title="Copy UPI ID"
                       >
                         {copied === 'upi' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -482,7 +560,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
                     value={utrNumber}
                     onChange={(e) => setUtrNumber(e.target.value)}
                     placeholder="Enter 12-digit UTR number" 
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-slate-800 focus:ring-primary" 
+=======
+                    className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-slate-800 focus:ring-amber-500" 
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                 </div>
               </div>
@@ -497,7 +579,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
                     value={userUpi}
                     onChange={(e) => setUserUpi(e.target.value)}
                     placeholder="e.g. yourname@upi" 
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-slate-800 focus:ring-primary" 
+=======
+                    className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-slate-800 focus:ring-amber-500" 
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                   <p className="text-[9px] text-slate-600 font-bold uppercase leading-relaxed">
                     Double check your UPI ID. Admin will send payment to this ID.
@@ -516,7 +602,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
             <button 
               onClick={handleInitiateSwap}
               disabled={loading || !amount || (p2pType === 'sell' && !user.is_active)}
+<<<<<<< HEAD
               className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl bg-primary text-darker hover:bg-primary/80 transition-all disabled:opacity-50"
+=======
+              className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl bg-amber-500 text-darker hover:bg-amber-400 transition-all disabled:opacity-50"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
             >
               {loading ? 'Transmitting...' : (p2pType === 'sell' && !user.is_active) ? 'Activation Required' : `Initiate ${p2pType} Protocol`}
             </button>
@@ -588,7 +678,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet: initialWallet, init
                      <span className={`
                        ${h.status === 'approved' ? 'text-primary' : ''}
                        ${h.status === 'rejected' ? 'text-red-500' : ''}
+<<<<<<< HEAD
                        ${h.status === 'pending' ? 'text-primary opacity-50' : ''}
+=======
+                       ${h.status === 'pending' ? 'text-amber-500 opacity-50' : ''}
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                      `}>
                        {h.status}
                      </span>

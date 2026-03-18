@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import { mockApi } from "../lib/mockApi";
+<<<<<<< HEAD
 import { User, Wallet, ExchangerRequest, Task, Transaction, Settings } from "../types";
+=======
+import { User, Wallet, ExchangerRequest, Task, Transaction } from "../types";
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 import { BRAND_CONFIG } from "../brandConfig";
 
 interface AdminPanelProps {
@@ -11,7 +15,11 @@ interface AdminPanelProps {
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
   const [activeSubTab, setActiveSubTab] = useState<
+<<<<<<< HEAD
     "analytics" | "users" | "exchanger" | "tasks" | "settings" | "deposits" | "offers"
+=======
+    "analytics" | "users" | "exchanger" | "tasks" | "settings" | "deposits"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   >("analytics");
   const [users, setUsers] = useState<(User & { wallets: Wallet[] })[]>([]);
   const [exchangeRequests, setExchangeRequests] = useState<ExchangerRequest[]>(
@@ -43,12 +51,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
   );
   const [marqueeText, setMarqueeText] = useState("");
   const [telegramLink, setTelegramLink] = useState("https://t.me/cryptospiral");
+<<<<<<< HEAD
   const [hallOfFameMarquee, setHallOfFameMarquee] = useState("");
   const [minDeposit, setMinDeposit] = useState(10);
   const [minWithdrawal, setMinWithdrawal] = useState(20);
   const [maxWithdrawal, setMaxWithdrawal] = useState(1000);
   const [depositFee, setDepositFee] = useState(0);
   const [withdrawalFee, setWithdrawalFee] = useState(1);
+=======
+  const [minDeposit, setMinDeposit] = useState(10);
+  const [minWithdrawal, setMinWithdrawal] = useState(20);
+  const [maxWithdrawal, setMaxWithdrawal] = useState(1000);
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(
     null,
@@ -66,9 +80,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     link: "",
   });
 
+<<<<<<< HEAD
   const [weeklyOfferSettings, setWeeklyOfferSettings] = useState<any>(null);
   const [weeklyAchievers, setWeeklyAchievers] = useState<any[]>([]);
 
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   const [processing, setProcessing] = useState<string | null>(null);
   const [giftAmount, setGiftAmount] = useState<string>("");
   const [giftUserId, setGiftUserId] = useState<string | null>(null);
@@ -76,7 +93,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
   const [deleteChecked, setDeleteChecked] = useState(false);
   const [purgeConfirmText, setPurgeConfirmText] = useState("");
   const [showPurgeModal, setShowPurgeModal] = useState(false);
+<<<<<<< HEAD
   const [showResetModal, setShowResetModal] = useState(false);
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   const [userOffset, setUserOffset] = useState(0);
   const [exOffset, setExOffset] = useState(0);
   const PAGE_SIZE = 50;
@@ -106,7 +126,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         console.error("Failed to fetch transactions", txErr);
       }
 
+<<<<<<< HEAD
       const settings = await mockApi.db.getSettings() as any;
+=======
+      const settings = await mockApi.db.getSettings();
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       if (settings) {
         setBuyRate(settings.usdt_buy_rate || 92);
         setSellRate(settings.usdt_sell_rate || 88);
@@ -126,6 +150,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
             "⚡ NODE ACTIVE: SYSTEM ONLINE | 💎 USDT/INR: ₹92.45 (+0.4%) | 🔥 NETWORK VOLUME: $4.2M | 🚀 NEW POOL 5 ENTRY FROM ID #8291",
         );
         setTelegramLink(settings.telegram_link || "https://t.me/cryptospiral");
+<<<<<<< HEAD
         setHallOfFameMarquee(settings.hall_of_fame_marquee || "🏆 CONGRATULATIONS TO OUR ELITE ACHIEVERS! KEEP PUSHING FOR THE TOP! 🚀");
         setMinDeposit(settings.min_deposit || 10);
         setMinWithdrawal(settings.min_withdrawal || 20);
@@ -139,6 +164,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
 
       const achievers = await mockApi.db.getWeeklyAchievers();
       setWeeklyAchievers(achievers);
+=======
+        setMinDeposit(settings.min_deposit || 10);
+        setMinWithdrawal(settings.min_withdrawal || 20);
+        setMaxWithdrawal(settings.max_withdrawal || 1000);
+      }
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     } catch (err) {
       console.error(err);
     } finally {
@@ -186,7 +217,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     }
 
     try {
+<<<<<<< HEAD
       const wallet = await mockApi.db.getWallet(giftUserId) as any;
+=======
+      const wallet = await mockApi.db.getWallet(giftUserId);
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       if (wallet) {
         await mockApi.db.updateWallet(giftUserId, wallet.balance + amount);
         showStatus(`Gifted $${amount} USDT Successfully`);
@@ -246,6 +281,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         min_deposit: minDeposit,
         min_withdrawal: minWithdrawal,
         max_withdrawal: maxWithdrawal,
+<<<<<<< HEAD
         deposit_fee: depositFee,
         withdrawal_fee: withdrawalFee,
         hall_of_fame_marquee: hallOfFameMarquee,
@@ -253,6 +289,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         weekly_description: weeklyOfferSettings?.description,
       });
       showStatus("System Rates & Offers Updated Successfully");
+=======
+      });
+      showStatus("System Rates Updated Successfully");
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     } catch (e: any) {
       console.error("Rate update error:", e);
       showStatus(e.message || "Failed to update rates", "error");
@@ -365,7 +405,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     setProcessing(requestId);
     try {
       // Re-fetch the latest status from DB to avoid stale state issues
+<<<<<<< HEAD
       const latestRequest = await mockApi.db.getExchangeRequest(requestId) as any;
+=======
+      const latestRequest = await mockApi.db.getExchangeRequest(requestId);
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 
       if (!latestRequest || latestRequest.status !== "pending") {
         showStatus("Request already processed", "error");
@@ -404,7 +448,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         (latestRequest.type === "withdraw" || latestRequest.type === "sell") &&
         status === "rejected"
       ) {
+<<<<<<< HEAD
         const wallet = await mockApi.db.getWallet(latestRequest.user_id) as any;
+=======
+        const wallet = await mockApi.db.getWallet(latestRequest.user_id);
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         if (wallet) {
           await mockApi.db.updateWallet(
             latestRequest.user_id,
@@ -439,6 +487,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     }
   };
 
+<<<<<<< HEAD
   const handleResetWeekly = async () => {
     try {
       setLoading(true);
@@ -463,6 +512,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     }
   };
 
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   const filteredUsers = users.filter(
     (u) =>
       (u.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -471,11 +522,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
 
   // Analytics Calculations
   const totalBalance = users.reduce(
+<<<<<<< HEAD
     (acc, u) => acc + ((u.wallets?.[0] as any)?.balance || 0),
     0,
   );
   const pendingExchanges = exchangeRequests.filter(
     (r) => (r as any).status === "pending",
+=======
+    (acc, u) => acc + (u.wallets?.[0]?.balance || 0),
+    0,
+  );
+  const pendingExchanges = exchangeRequests.filter(
+    (r) => r.status === "pending",
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   ).length;
 
   return (
@@ -529,7 +588,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
               {distributing ? "Distributing..." : "Distribute Daily ROI"}
             </button>
             {distributeStatus && (
+<<<<<<< HEAD
               <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+=======
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest animate-pulse">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 {distributeStatus}
               </span>
             )}
@@ -543,7 +606,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
             { id: "exchanger", label: "Exchange" },
             { id: "deposits", label: "Deposits" },
             { id: "tasks", label: "Tasks" },
+<<<<<<< HEAD
             { id: "offers", label: "Offers" },
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
             { id: "settings", label: "Settings" },
           ].map((tab) => (
             <button
@@ -582,7 +648,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                 label: "Pending P2P",
                 value: pendingExchanges,
                 icon: "⏳",
+<<<<<<< HEAD
                 color: "text-primary",
+=======
+                color: "text-amber-500",
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               },
               {
                 label: "Active Tasks",
@@ -677,7 +747,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                             tx.status === "completed"
                               ? "bg-green-500/10 border-green-500/20 text-green-500"
                               : tx.status === "pending"
+<<<<<<< HEAD
                                 ? "bg-primary/10 border-primary/20 text-primary"
+=======
+                                ? "bg-amber-500/10 border-amber-500/20 text-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                                 : "bg-red-500/10 border-red-500/20 text-red-500"
                           }`}
                         >
@@ -740,7 +814,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                                 {u.email}
                               </p>
                               <span
+<<<<<<< HEAD
                                 className={`w-2 h-2 rounded-full ${u.is_active ? "bg-primary" : "bg-red-500"}`}
+=======
+                                className={`w-2 h-2 rounded-full ${u.is_active ? "bg-primary animate-pulse" : "bg-red-500"}`}
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                                 title={u.is_active ? "Active" : "Inactive"}
                               ></span>
                             </div>
@@ -778,7 +856,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                       <td className="px-8 py-5 text-right space-x-3">
                         <button
                           onClick={() => setGiftUserId(u.id)}
+<<<<<<< HEAD
                           className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-darker transition-all"
+=======
+                          className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500 hover:text-darker transition-all"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                         >
                           Gift
                         </button>
@@ -836,7 +918,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                             {u.email}
                           </p>
                           <span
+<<<<<<< HEAD
                             className={`w-1.5 h-1.5 rounded-full ${u.is_active ? "bg-primary" : "bg-red-500"}`}
+=======
+                            className={`w-1.5 h-1.5 rounded-full ${u.is_active ? "bg-primary animate-pulse" : "bg-red-500"}`}
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                           ></span>
                         </div>
                         <p className="text-[8px] text-slate-500 font-mono uppercase">
@@ -878,7 +964,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => setGiftUserId(u.id)}
+<<<<<<< HEAD
                         className="p-3 rounded-xl bg-primary/10 text-primary border border-primary/20"
+=======
+                        className="p-3 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                       >
                         Gift
                       </button>
@@ -1047,9 +1137,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
       {/* Gift Modal */}
       {giftUserId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-darker/80 backdrop-blur-md animate-in fade-in">
+<<<<<<< HEAD
           <div className="glass w-full max-w-md p-8 rounded-[3rem] border-primary/20 shadow-2xl shadow-primary/10">
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-primary/20 rounded-3xl mx-auto flex items-center justify-center text-3xl mb-4">
+=======
+          <div className="glass w-full max-w-md p-8 rounded-[3rem] border-amber-500/20 shadow-2xl shadow-amber-500/10">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-amber-500/20 rounded-3xl mx-auto flex items-center justify-center text-3xl mb-4">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 🎁
               </div>
               <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
@@ -1075,7 +1171,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     value={giftAmount}
                     onChange={(e) => setGiftAmount(e.target.value)}
                     placeholder="0.00"
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-2xl py-4 pl-12 pr-6 text-xl font-black text-white outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                    className="w-full bg-slate-900 border-none rounded-2xl py-4 pl-12 pr-6 text-xl font-black text-white outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                 </div>
               </div>
@@ -1090,7 +1190,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                 </button>
                 <button
                   type="submit"
+<<<<<<< HEAD
                   className="flex-2 py-4 bg-primary text-darker font-black rounded-2xl uppercase text-[11px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20"
+=======
+                  className="flex-2 py-4 bg-amber-500 text-darker font-black rounded-2xl uppercase text-[11px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-amber-500/20"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 >
                   Confirm Gift
                 </button>
@@ -1110,7 +1214,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
               </h3>
               <div className="flex gap-4">
                 <div className="flex items-center gap-2">
+<<<<<<< HEAD
                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+=======
+                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     Live P2P Stream
                   </span>
@@ -1307,7 +1415,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                           </div>
                         </div>
                         <span
+<<<<<<< HEAD
                           className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${ex.status === "approved" ? "bg-green-500/10 text-green-500" : ex.status === "pending" ? "bg-primary/10 text-primary" : "bg-red-500/10 text-red-500"}`}
+=======
+                          className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${ex.status === "approved" ? "bg-green-500/10 text-green-500" : ex.status === "pending" ? "bg-amber-500/10 text-amber-500" : "bg-red-500/10 text-red-500"}`}
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                         >
                           {ex.status}
                         </span>
@@ -1522,7 +1634,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                                     dep.network === "TRC20"
                                       ? "bg-red-500/10 text-red-500"
                                       : dep.network === "BEP20"
+<<<<<<< HEAD
                                         ? "bg-primary/10 text-primary"
+=======
+                                        ? "bg-amber-500/10 text-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                                         : "bg-blue-500/10 text-blue-500"
                                   }`}
                                 >
@@ -1648,7 +1764,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                           </div>
                         </div>
                         <span
+<<<<<<< HEAD
                           className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${dep.status === "approved" ? "bg-green-500/10 text-green-500" : dep.status === "pending" ? "bg-primary/10 text-primary" : "bg-red-500/10 text-red-500"}`}
+=======
+                          className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${dep.status === "approved" ? "bg-green-500/10 text-green-500" : dep.status === "pending" ? "bg-amber-500/10 text-amber-500" : "bg-red-500/10 text-red-500"}`}
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                         >
                           {dep.status}
                         </span>
@@ -1673,7 +1793,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                                 dep.network === "TRC20"
                                   ? "bg-red-500/10 text-red-500"
                                   : dep.network === "BEP20"
+<<<<<<< HEAD
                                     ? "bg-primary/10 text-primary"
+=======
+                                    ? "bg-amber-500/10 text-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                                     : "bg-blue-500/10 text-blue-500"
                               }`}
                             >
@@ -1879,7 +2003,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     return (
                       <div
                         key={s.id}
+<<<<<<< HEAD
                         className="glass p-6 rounded-3xl border-primary/20 bg-primary/5"
+=======
+                        className="glass p-6 rounded-3xl border-amber-500/20 bg-amber-500/5"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                       >
                         <div className="flex justify-between items-start mb-4">
                           <div>
@@ -1901,7 +2029,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                             )}
                           </div>
                           <div className="text-right">
+<<<<<<< HEAD
                             <p className="text-lg font-black text-primary">
+=======
+                            <p className="text-lg font-black text-amber-500">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                               ${task?.reward} USDT
                             </p>
                           </div>
@@ -1968,9 +2100,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
       {/* Settings View */}
       {activeSubTab === "settings" && (
         <div className="max-w-3xl mx-auto animate-in zoom-in duration-500">
+<<<<<<< HEAD
           <div className="glass p-10 rounded-[3rem] border-primary/20 space-y-10">
             <div className="text-center">
               <h3 className="text-2xl font-black uppercase text-primary mb-2">
+=======
+          <div className="glass p-10 rounded-[3rem] border-amber-500/20 space-y-10">
+            <div className="text-center">
+              <h3 className="text-2xl font-black uppercase text-amber-500 mb-2">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 System Parameters
               </h3>
               <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
@@ -1989,7 +2127,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     type="number"
                     value={buyRate}
                     onChange={(e) => setBuyRate(parseFloat(e.target.value))}
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-3xl py-6 px-8 text-4xl font-black outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                    className="w-full bg-slate-900 border-none rounded-3xl py-6 px-8 text-4xl font-black outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                   <span className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-600 font-black">
                     ₹
@@ -2006,7 +2148,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     type="number"
                     value={sellRate}
                     onChange={(e) => setSellRate(parseFloat(e.target.value))}
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-3xl py-6 px-8 text-4xl font-black outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                    className="w-full bg-slate-900 border-none rounded-3xl py-6 px-8 text-4xl font-black outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                   <span className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-600 font-black">
                     ₹
@@ -2025,7 +2171,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                   value={adminUpi}
                   onChange={(e) => setAdminUpi(e.target.value)}
                   placeholder="spiral@upi"
+<<<<<<< HEAD
                   className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                  className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 />
               </div>
               <div className="space-y-4">
@@ -2037,13 +2187,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                   value={adminQr}
                   onChange={(e) => setAdminQr(e.target.value)}
                   placeholder="https://... or data:image/png;base64,..."
+<<<<<<< HEAD
                   className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                  className="w-full bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 />
               </div>
             </div>
 
             <div className="space-y-6">
+<<<<<<< HEAD
               <h4 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-primary/20 pb-2">
+=======
+              <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 System Marquee Announcement
               </h4>
               <div className="space-y-2">
@@ -2055,7 +2213,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                   onChange={(e) => setMarqueeText(e.target.value)}
                   placeholder="Enter announcement text here..."
                   rows={3}
+<<<<<<< HEAD
                   className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-primary resize-none"
+=======
+                  className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500 resize-none"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 />
                 <p className="text-[8px] text-slate-600 font-bold uppercase tracking-widest">
                   Tip: Use emojis and | separator for a professional look.
@@ -2064,7 +2226,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
             </div>
 
             <div className="space-y-6">
+<<<<<<< HEAD
               <h4 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-primary/20 pb-2">
+=======
+              <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 Transaction Limits (USDT)
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2076,7 +2242,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     type="number"
                     value={minDeposit}
                     onChange={(e) => setMinDeposit(parseFloat(e.target.value))}
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                    className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                 </div>
                 <div className="space-y-2">
@@ -2089,7 +2259,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     onChange={(e) =>
                       setMinWithdrawal(parseFloat(e.target.value))
                     }
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                    className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                 </div>
                 <div className="space-y-2">
@@ -2102,13 +2276,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     onChange={(e) =>
                       setMaxWithdrawal(parseFloat(e.target.value))
                     }
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                    className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                 </div>
               </div>
             </div>
 
             <div className="space-y-6">
+<<<<<<< HEAD
               <h4 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-primary/20 pb-2">
                 Transaction Fees (USDT)
               </h4>
@@ -2146,6 +2325,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
 
             <div className="space-y-6">
               <h4 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-primary/20 pb-2">
+=======
+              <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 Deposit Addresses (USDT)
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2158,7 +2340,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     value={adminAddressTrc20}
                     onChange={(e) => setAdminAddressTrc20(e.target.value)}
                     placeholder="TRC20 Address..."
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                    className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                 </div>
                 <div className="space-y-2">
@@ -2170,7 +2356,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     value={adminAddressBep20}
                     onChange={(e) => setAdminAddressBep20(e.target.value)}
                     placeholder="BEP20 Address..."
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                    className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                 </div>
                 <div className="space-y-2">
@@ -2182,14 +2372,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     value={adminAddressErc20}
                     onChange={(e) => setAdminAddressErc20(e.target.value)}
                     placeholder="ERC20 Address..."
+<<<<<<< HEAD
                     className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                    className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   />
                 </div>
               </div>
             </div>
 
+<<<<<<< HEAD
             <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
               <p className="text-[10px] font-bold text-primary uppercase leading-relaxed tracking-wider">
+=======
+            <div className="bg-amber-500/5 p-6 rounded-2xl border border-amber-500/10">
+              <p className="text-[10px] font-bold text-amber-500 uppercase leading-relaxed tracking-wider">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 Note: Adjusting these rates will immediately affect the P2P
                 Exchanger for all users. System updates take 3-5 seconds to
                 propagate across all edge nodes.
@@ -2197,7 +2396,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
             </div>
 
             <div className="space-y-6">
+<<<<<<< HEAD
               <h4 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-primary/20 pb-2">
+=======
+              <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 Support & Community
               </h4>
               <div className="space-y-2">
@@ -2209,13 +2412,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                   value={telegramLink}
                   onChange={(e) => setTelegramLink(e.target.value)}
                   placeholder="https://t.me/your_channel"
+<<<<<<< HEAD
                   className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
+=======
+                  className="w-full bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 />
               </div>
             </div>
 
             <div className="space-y-6">
+<<<<<<< HEAD
               <h4 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-primary/20 pb-2">
+=======
+              <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest border-b border-amber-500/20 pb-2">
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 Admin Security
               </h4>
               <div className="space-y-4">
@@ -2228,11 +2439,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     value={adminNewPassword}
                     onChange={(e) => setAdminNewPassword(e.target.value)}
                     placeholder="Enter new admin password..."
+<<<<<<< HEAD
                     className="flex-1 bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-primary"
                   />
                   <button
                     onClick={handleAdminPasswordChange}
                     className="px-6 py-3 bg-white/5 text-primary border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-darker transition-all"
+=======
+                    className="flex-1 bg-slate-900 border-none rounded-xl py-3 px-4 text-xs font-bold outline-none ring-1 ring-white/5 focus:ring-amber-500"
+                  />
+                  <button
+                    onClick={handleAdminPasswordChange}
+                    className="px-6 py-3 bg-white/5 text-amber-500 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-darker transition-all"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                   >
                     Update
                   </button>
@@ -2298,13 +2517,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
 
             <button
               onClick={handleUpdateRates}
+<<<<<<< HEAD
               className="w-full py-5 bg-primary text-darker font-black rounded-[2rem] uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+=======
+              className="w-full py-5 bg-amber-500 text-darker font-black rounded-[2rem] uppercase tracking-[0.3em] shadow-2xl shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
             >
               Apply Global Updates
             </button>
           </div>
         </div>
       )}
+<<<<<<< HEAD
       {/* Offers View */}
       {activeSubTab === "offers" && (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -2426,6 +2650,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         </div>
       )}
 
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       {/* Purge Confirmation Modal */}
       {showPurgeModal && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-darker/95 backdrop-blur-2xl animate-in fade-in">
@@ -2488,6 +2714,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
           </div>
         </div>
       )}
+<<<<<<< HEAD
 
       {/* Reset Weekly Confirmation Modal */}
       {showResetModal && (
@@ -2526,6 +2753,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
           </div>
         </div>
       )}
+=======
+>>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     </div>
   );
 };
