@@ -8,11 +8,13 @@ import AutoPools from './pages/AutoPools';
 import Exchanger from './pages/Exchanger';
 import TaskCenter from './pages/TaskCenter';
 import IncomeDetails from './pages/IncomeDetails';
+import Mining from './pages/Mining';
 import AdminPanel from './pages/AdminPanel';
 import Login from './pages/Login';
 import InstallPrompt from './components/InstallPrompt';
 import { mockApi } from './lib/mockApi';
 import { BRAND_CONFIG } from './brandConfig';
+import { MLM_CONFIG } from './constants';
 
 import { isAppwriteConfigured, APPWRITE_CONFIG } from './lib/appwrite';
 import { AlertTriangle, CheckCircle, Wifi, WifiOff } from 'lucide-react';
@@ -47,6 +49,18 @@ const App: React.FC = () => {
     
     // Periodic check every 2 minutes
     const interval = setInterval(checkConnection, 120000);
+
+    // Request notification permission if not granted
+    if ('Notification' in window && Notification.permission === 'default') {
+      setTimeout(() => {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            console.log('Notification permission granted.');
+          }
+        });
+      }, 5000); // Wait 5 seconds before asking
+    }
+
     return () => clearInterval(interval);
   }, [checkConnection]);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -58,8 +72,48 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [exchangerSubTab, setExchangerSubTab] = useState<'topup' | 'withdraw' | 'swap'>('topup');
   const [wallet, setWallet] = useState<Wallet>({ id: '', user_id: '', balance: 0, total_earned: 0, total_withdrawn: 0 });
+  const [liveBalance, setLiveBalance] = useState(0);
   const [pools, setPools] = useState<any[]>([]);
   const [telegramLink, setTelegramLink] = useState('https://t.me/cryptospiral');
+
+  // Real-time Balance Growth Ticker (Global)
+  useEffect(() => {
+    if (!currentUser || !wallet.id || !currentUser.is_active) {
+      setLiveBalance(wallet.balance || 0);
+      return;
+    }
+
+    const walletDailyRate = MLM_CONFIG.WALLET_DAILY_ROI;
+    const poolDailyRate = MLM_CONFIG.POOL_DAILY_ROI;
+    const walletRatePerSec = walletDailyRate / 86400;
+    const poolRatePerSec = poolDailyRate / 86400;
+    const tickerStartTime = Date.now();
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      let walletAccrued = 0;
+      let poolAccrued = 0;
+      
+      // Wallet Accrual
+      if (wallet.balance > 0) {
+        const lastWalletROI = wallet.last_roi_at ? new Date(wallet.last_roi_at).getTime() : tickerStartTime;
+        const walletSecs = (now - lastWalletROI) / 1000;
+        walletAccrued = wallet.balance * walletRatePerSec * walletSecs;
+      }
+      
+      // Pool Accrual (Pool 1)
+      const pool1 = pools.find(p => p.pool_number === 1 && p.status === 'active');
+      if (pool1) {
+        const lastPoolROI = wallet.last_pool_roi_at ? new Date(wallet.last_pool_roi_at).getTime() : new Date(pool1.created_at).getTime();
+        const poolSecs = (now - lastPoolROI) / 1000;
+        poolAccrued = 10 * poolRatePerSec * poolSecs;
+      }
+      
+      setLiveBalance(wallet.balance + walletAccrued + poolAccrued);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [wallet.balance, wallet.last_roi_at, wallet.last_pool_roi_at, currentUser?.id, currentUser?.is_active, pools]);
 
   const fetchUserData = useCallback(async (user: User) => {
     try {
@@ -127,9 +181,27 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [currentUser?.id, isLoggingOut]);
 
+  const showNotification = (title: string, body: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, {
+          body,
+          icon: 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a635305444d75633144c18f02626cc28e271cf0/128/color/usdt.png',
+          badge: 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a635305444d75633144c18f02626cc28e271cf0/128/color/usdt.png',
+          vibrate: [100, 50, 100],
+          data: {
+            dateOfArrival: Date.now(),
+            primaryKey: 1
+          }
+        } as any);
+      });
+    }
+  };
+
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('spiral_user', JSON.stringify(user));
+    showNotification('Access Granted', `Welcome back to ${BRAND_CONFIG.shortName} Protocol.`);
   };
 
   const handleLogout = async () => {
@@ -190,6 +262,7 @@ const App: React.FC = () => {
       case 'exchanger': return <Exchanger user={currentUser} wallet={wallet} initialSubTab={exchangerSubTab} />;
       case 'tasks': return <TaskCenter user={currentUser} wallet={wallet} />;
       case 'income': return <IncomeDetails user={currentUser} />;
+      case 'mining': return <Mining user={currentUser} wallet={wallet} pools={pools} />;
       case 'admin': return isUserAdmin ? <AdminPanel user={currentUser} onLogout={handleLogout} /> : <Dashboard user={currentUser} wallet={wallet} pools={pools} onExchangerNav={navigateToExchanger} onNavigate={setActiveTab} />;
       default: return <Dashboard user={currentUser} wallet={wallet} pools={pools} onExchangerNav={navigateToExchanger} onNavigate={setActiveTab} />;
     }
@@ -250,7 +323,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="text-right hidden xs:block">
                 <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Vault Balance</p>
-                <p className="text-lg font-black text-primary">${wallet?.balance?.toFixed(2) || '0.00'}</p>
+                <p className="text-lg font-black text-primary">${liveBalance?.toFixed(2) || '0.00'}</p>
              </div>
              <div className="flex items-center gap-2 sm:gap-4">
                <a 

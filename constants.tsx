@@ -17,6 +17,8 @@ export const MLM_CONFIG = {
   AUTO_EXCHANGE_THRESHOLD: 100, // USDT
   USDT_BUY_RATE: 92,
   USDT_SELL_RATE: 88,
+  WALLET_DAILY_ROI: 0.002, // 0.20%
+  POOL_DAILY_ROI: 0.005,   // 0.50%
 };
 
 export const POOL_NAMES = [

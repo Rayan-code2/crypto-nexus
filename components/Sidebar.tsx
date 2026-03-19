@@ -14,6 +14,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Icons.Dashboard },
+    { id: 'mining', label: 'Live Mining', icon: Icons.Pools },
     { id: 'matrix', label: 'Matrix Tree', icon: Icons.Network },
     { id: 'pools', label: 'Auto Pools', icon: Icons.Pools },
     { id: 'exchanger', label: 'Exchanger', icon: Icons.Exchanger },
@@ -71,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
       </aside>
 
       {/* Mobile Tab Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-2xl border-t border-white/10 z-50 grid grid-cols-6 items-center py-3 px-1 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-2xl border-t border-white/10 z-50 grid grid-cols-7 items-center py-3 px-1 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         {menuItems.map((item) => (
           <button
             key={item.id}
@@ -85,6 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
             </div>
             <span className={`text-[8px] font-black whitespace-nowrap uppercase tracking-[0.1em] ${activeTab === item.id ? 'text-white' : 'text-slate-500'}`}>
               {item.id === 'dashboard' ? 'Home' : 
+               item.id === 'mining' ? 'Mining' :
                item.id === 'matrix' ? 'Matrix' : 
                item.id === 'pools' ? 'Pools' : 
                item.id === 'exchanger' ? 'Swap' : 

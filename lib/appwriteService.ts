@@ -10,7 +10,7 @@ export const appwriteService = {
         await account.create(userId, email, pass);
         
         // Create user profile in database
-        const userData: any = {
+        let userData: any = {
           email,
           role: email.includes('admin') ? 'admin' : 'user',
           level: 1,
@@ -18,6 +18,7 @@ export const appwriteService = {
           matrix_parent_id: null,
           matrix_position: null,
           direct_count: 0,
+          weekly_directs: 0,
           children_count: 0,
           is_blocked: false,
           is_active: false,
@@ -33,11 +34,21 @@ export const appwriteService = {
             userData
           );
         } catch (error: any) {
-          if (error.message?.includes('UNKNOWN_ATTRIBUTE')) {
+          if (error.message?.includes('UNKNOWN_ATTRIBUTE') && error.message?.includes('weekly_directs')) {
+            console.warn("Appwrite Schema Warning: 'weekly_directs' attribute missing. Retrying without it.");
+            delete userData.weekly_directs;
+            await databases.createDocument(
+              APPWRITE_CONFIG.databaseId!,
+              APPWRITE_CONFIG.collections.users!,
+              userId,
+              userData
+            );
+          } else if (error.message?.includes('UNKNOWN_ATTRIBUTE')) {
             const attr = error.message.match(/"([^"]+)"/)?.[1] || "required attributes";
             throw new Error(`Appwrite Schema Error: Please add '${attr}' (String/Integer/Boolean) attribute to your 'users' collection in Appwrite Console.`);
+          } else {
+            throw error;
           }
-          throw error;
         }
 
         // Create initial wallet
@@ -900,9 +911,13 @@ export const appwriteService = {
           const sponsor = await databases.getDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, user.sponsor_id) as any;
           if (sponsor.is_active) {
             const newDirectCount = (sponsor.direct_count || 0) + 1;
+            const newWeeklyDirects = (sponsor.weekly_directs || 0) + 1;
             const sponsorWallet = await appwriteService.db.getWallet(sponsor.$id) as any as Wallet;
             
-            let updateData: any = { direct_count: newDirectCount };
+            let updateData: any = { 
+              direct_count: newDirectCount,
+              weekly_directs: newWeeklyDirects
+            };
             let walletUpdate: any = {};
 
             if (newDirectCount === 1 || newDirectCount === 3) {
@@ -939,7 +954,17 @@ export const appwriteService = {
               walletUpdate.direct_income = (sponsorWallet.direct_income || 0) + 5;
             }
 
-            await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, sponsor.$id, updateData);
+            try {
+              await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, sponsor.$id, updateData);
+            } catch (error: any) {
+              if (error.message?.includes('UNKNOWN_ATTRIBUTE') && error.message?.includes('weekly_directs')) {
+                console.warn("Appwrite Schema Warning: 'weekly_directs' attribute missing. Retrying without it.");
+                delete updateData.weekly_directs;
+                await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, sponsor.$id, updateData);
+              } else {
+                throw error;
+              }
+            }
             await databases.updateDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.wallets!, (sponsorWallet as any).$id, walletUpdate);
 
             // Trigger AutoPool Filling for Pool 1 because a new person has actually entered
@@ -1382,22 +1407,30 @@ export const appwriteService = {
     },
 
     resetWeeklyDirects: async () => {
-      const usersRes = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.users!,
-        [Query.greaterThan('weekly_directs', 0), Query.limit(5000)]
-      );
-
-      for (const user of usersRes.documents) {
-        await databases.updateDocument(
+      try {
+        const usersRes = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId!,
           APPWRITE_CONFIG.collections.users!,
-          user.$id,
-          {
-            weekly_directs: 0,
-            last_reward_week: ''
-          }
+          [Query.greaterThan('weekly_directs', 0), Query.limit(5000)]
         );
+
+        for (const user of usersRes.documents) {
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.users!,
+            user.$id,
+            {
+              weekly_directs: 0,
+              last_reward_week: ''
+            }
+          );
+        }
+      } catch (error: any) {
+        if (error.message?.includes('UNKNOWN_ATTRIBUTE') && error.message?.includes('weekly_directs')) {
+          console.warn("Appwrite Schema Warning: 'weekly_directs' attribute missing. Skipping reset.");
+          return;
+        }
+        throw error;
       }
     },
 

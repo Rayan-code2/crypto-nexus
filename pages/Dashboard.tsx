@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { User, Wallet, Transaction } from '../types';
 import { mockApi } from '../lib/mockApi';
-import { POOL_NAMES } from '../constants';
+import { MLM_CONFIG, POOL_NAMES } from '../constants';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, AreaChart, Area, LineChart, Line 
@@ -86,8 +86,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
 
   // Real-time Balance Growth Ticker (Dual ROI)
   React.useEffect(() => {
-    const walletDailyRate = 0.002; // 0.20%
-    const poolDailyRate = 0.005; // 0.50% on $10
+    const walletDailyRate = MLM_CONFIG.WALLET_DAILY_ROI;
+    const poolDailyRate = MLM_CONFIG.POOL_DAILY_ROI;
     
     const walletRatePerSec = walletDailyRate / 86400;
     const poolRatePerSec = poolDailyRate / 86400;
@@ -302,6 +302,109 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                 <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
               </div>
             ))}
+          </div>
+
+          {/* LIVE MINING PROTOCOL - FUTURISTIC REDESIGN */}
+          <div className="mt-6 relative group">
+            {/* Outer Glow & Border */}
+            <div className="absolute -inset-[1px] bg-gradient-to-r from-primary/50 via-secondary/50 to-primary/50 rounded-[2.5rem] blur-[2px] opacity-70 group-hover:opacity-100 transition-opacity duration-700"></div>
+            
+            <div className="relative glass rounded-[2.5rem] p-1 border border-white/10 bg-[#0a0a0c] overflow-hidden">
+              {/* Background Grid Pattern */}
+              <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+              
+              <div className="flex flex-col lg:flex-row items-stretch relative z-10">
+                {/* Left Section: Visual Core */}
+                <div className="lg:w-1/3 p-8 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-white/5 bg-white/[0.02]">
+                  <div className="relative mb-6">
+                    {/* Scanning Line Animation */}
+                    <div className="absolute top-0 left-0 w-full h-1 bg-primary/40 blur-sm animate-scan z-20"></div>
+                    
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-darker border border-primary/20 flex items-center justify-center relative overflow-hidden group-hover:border-primary/40 transition-colors duration-500">
+                      {/* Rotating Rings */}
+                      <div className="absolute inset-0 border-2 border-dashed border-primary/10 rounded-full animate-spin-slow"></div>
+                      <div className="absolute inset-4 border border-secondary/20 rounded-full animate-reverse-spin"></div>
+                      
+                      <div className="relative z-10 flex flex-col items-center">
+                        <Cpu className="w-10 h-10 sm:w-14 sm:h-14 text-primary animate-pulse" />
+                        <div className="mt-2 flex items-center gap-1">
+                          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></div>
+                          <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest">Active</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <h3 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none mb-1">ROI Protocol</h3>
+                    <p className="text-slate-500 text-[8px] font-bold uppercase tracking-[0.3em]">Neural Accrual Engine</p>
+                  </div>
+                </div>
+
+                {/* Middle Section: Real-time Data */}
+                <div className="flex-1 p-8 flex flex-col justify-center items-center lg:items-start">
+                  <div className="flex flex-col items-center lg:items-start w-full">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 flex items-center gap-1.5">
+                        <Zap size={10} className="text-primary" />
+                        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Real-time Stream</span>
+                      </div>
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Session: {Math.random().toString(36).substring(7).toUpperCase()}</span>
+                    </div>
+
+                    <div className="relative">
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] block mb-1">Current Session Yield</span>
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-4xl sm:text-6xl font-black text-white italic tracking-tighter tabular-nums drop-shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                          +${(liveWalletROI + livePoolROI - (wallet.wallet_roi_earned || 0) - (wallet.pool_roi_earned || 0)).toFixed(6)}
+                        </span>
+                        <span className="text-xs sm:text-sm font-black text-primary/60 uppercase italic tracking-tighter">USDT</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 mt-8 w-full max-w-sm">
+                      <div className="space-y-1">
+                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Efficiency</p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 w-[99.9%]"></div>
+                          </div>
+                          <span className="text-[10px] font-black text-emerald-400 italic">99.9%</span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Node Load</p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary w-[12%]"></div>
+                          </div>
+                          <span className="text-[10px] font-black text-primary italic">Minimal</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Section: Actions */}
+                <div className="lg:w-1/4 p-8 flex flex-col justify-center items-center lg:items-end border-t lg:border-t-0 lg:border-l border-white/5 bg-white/[0.01]">
+                  <button 
+                    onClick={() => onNavigate?.('income')}
+                    className="group/btn relative w-full h-14 rounded-2xl overflow-hidden active:scale-95 transition-transform"
+                  >
+                    <div className="absolute inset-0 bg-primary group-hover/btn:bg-primary/90 transition-colors"></div>
+                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer"></div>
+                    <div className="relative z-10 flex items-center justify-center gap-3 px-6 h-full">
+                      <TrendingUp size={18} className="text-darker" />
+                      <span className="text-xs font-black text-darker uppercase tracking-widest">View Ledger</span>
+                    </div>
+                  </button>
+                  
+                  <p className="mt-4 text-[7px] font-black text-slate-600 uppercase tracking-[0.3em] text-center lg:text-right">
+                    Secured by Quantum Protocol v1.0
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
