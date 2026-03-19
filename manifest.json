@@ -1,23 +1,23 @@
 {
   "name": "CryptoSpiral",
   "short_name": "CryptoSpiral",
-  "description": "Elite Matrix System - Decentralized Earnings Protocol",
+  "description": "Earn USDT through tasks and pools",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#06b6d4",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00ffa3",
   "icons": [
     {
       "src": "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a635305444d75633144c18f02626cc28e271cf0/128/color/usdt.png",
-      "sizes": "192x192",
+      "sizes": "128x128",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "https://cryptologos.cc/logos/tether-usdt-logo.png?v=025",
+      "src": "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a635305444d75633144c18f02626cc28e271cf0/512/color/usdt.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }

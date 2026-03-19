@@ -5,7 +5,8 @@ const ASSETS_TO_CACHE = [
   '/index.css',
   '/index.tsx',
   '/manifest.json',
-  'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a635305444d75633144c18f02626cc28e271cf0/128/color/usdt.png'
+  'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a635305444d75633144c18f02626cc28e271cf0/128/color/usdt.png',
+  'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a635305444d75633144c18f02626cc28e271cf0/512/color/usdt.png'
 ];
 
 self.addEventListener('install', (event) => {
