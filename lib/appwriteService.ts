@@ -71,6 +71,10 @@ export const appwriteService = {
 
         return { user: { id: userId, email } };
       } catch (error: any) {
+        console.error("Appwrite signUp error:", error);
+        if (error.message === 'Failed to fetch' || error.message?.includes('Network Error')) {
+          throw new Error("Network Error: Could not connect to Appwrite. Please ensure you have added this domain to your Appwrite Project's 'Web Platforms'.");
+        }
         if (error.code === 409 || error.message?.includes('already exists')) {
           throw new Error("Terminal ID already registered. Please login.");
         }
@@ -81,20 +85,31 @@ export const appwriteService = {
     signIn: async (email: string, pass: string) => {
       try {
         // Try to delete existing session first to prevent "session active" error
-        await account.deleteSession('current');
-      } catch (e) {
-        // Ignore if no session exists
-      }
-      await account.createEmailPasswordSession(email, pass);
-      const user = await account.get();
-      
-      const profile = await databases.getDocument(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.users!,
-        user.$id
-      );
+        try {
+          await account.deleteSession('current');
+        } catch (e) {
+          // Ignore if no session exists
+        }
+        await account.createEmailPasswordSession(email, pass);
+        const user = await account.get();
+        
+        const profile = await databases.getDocument(
+          APPWRITE_CONFIG.databaseId!,
+          APPWRITE_CONFIG.collections.users!,
+          user.$id
+        );
 
-      return { user: { ...profile, id: user.$id } };
+        return { user: { ...profile, id: user.$id } };
+      } catch (error: any) {
+        console.error("Appwrite signIn error:", error);
+        if (error.message === 'Failed to fetch' || error.message?.includes('Network Error')) {
+          throw new Error("Network Error: Could not connect to Appwrite. Please ensure you have added this domain to your Appwrite Project's 'Web Platforms' and that your Project ID is correct.");
+        }
+        if (error.code === 401 || error.message?.includes('Invalid credentials')) {
+          throw new Error("Invalid Terminal ID or Access Key.");
+        }
+        throw error;
+      }
     },
 
     signOut: async () => {
@@ -124,11 +139,8 @@ export const appwriteService = {
   db: {
     getWallet: async (userId: string) => {
       try {
-<<<<<<< HEAD
         if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
         
-=======
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         const response = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId!,
           APPWRITE_CONFIG.collections.wallets!,
@@ -161,11 +173,7 @@ export const appwriteService = {
         return { ...wallet, id: wallet.$id };
       } catch (error: any) {
         console.error("Appwrite getWallet error:", error);
-<<<<<<< HEAD
         if (error.message === 'Failed to fetch' || error.message?.includes('Network Error')) {
-=======
-        if (error.message === 'Failed to fetch') {
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
           throw new Error("Network Error: Could not connect to Appwrite. Please check if your endpoint is correct and if you have added your domain to Appwrite Platforms.");
         }
         if (error.message?.includes('Unknown attribute')) {
@@ -177,7 +185,6 @@ export const appwriteService = {
     },
 
     getTasks: async () => {
-<<<<<<< HEAD
       try {
         if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
 
@@ -246,52 +253,74 @@ export const appwriteService = {
         }
         throw error;
       }
-=======
-      const response = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.tasks!,
-        [Query.equal('is_active', true)]
-      );
-      return response.documents.map(doc => ({ ...doc, id: doc.$id }));
-    },
-
-    submitTask: async (userId: string, taskId: string, proof: string) => {
-      await databases.createDocument(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.submissions!,
-        ID.unique(),
-        {
-          user_id: userId,
-          task_id: taskId,
-          status: 'pending',
-          proof: proof
-        }
-      );
-    },
-
-    getTaskSubmissions: async (userId?: string) => {
-      const queries = userId ? [Query.equal('user_id', userId)] : [];
-      queries.push(Query.orderDesc('$createdAt'));
-      queries.push(Query.limit(100));
-      
-      const response = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.submissions!,
-        queries
-      );
-      return response.documents.map(doc => ({ ...doc, id: doc.$id }));
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     },
 
     approveTaskSubmission: async (submissionId: string, status: 'approved' | 'rejected') => {
-      // This is a placeholder for the logic. 
-      // In a real app, this would be a server-side function to handle wallet updates securely.
-      return await databases.updateDocument(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.submissions!,
-        submissionId,
-        { status }
-      );
+      try {
+        if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
+
+        // 1. Get the submission
+        const submission = await databases.getDocument(
+          APPWRITE_CONFIG.databaseId!,
+          APPWRITE_CONFIG.collections.submissions!,
+          submissionId
+        );
+
+        // If approving and not already approved, credit the user
+        if (status === 'approved' && submission.status !== 'approved') {
+          // 2. Get the task reward
+          const task = await databases.getDocument(
+            APPWRITE_CONFIG.databaseId!,
+            APPWRITE_CONFIG.collections.tasks!,
+            submission.task_id
+          );
+
+          const reward = Number(task.reward) || 0;
+
+          if (reward > 0) {
+            // 3. Get user wallet
+            const wallet = await appwriteService.db.getWallet(submission.user_id) as any;
+
+            // 4. Update wallet balance and total earned
+            await databases.updateDocument(
+              APPWRITE_CONFIG.databaseId!,
+              APPWRITE_CONFIG.collections.wallets!,
+              wallet.$id,
+              {
+                balance: (wallet.balance || 0) + reward,
+                total_earned: (wallet.total_earned || 0) + reward,
+                // We can also add it to direct_income or a new task_income field if it exists
+                direct_income: (wallet.direct_income || 0) + reward
+              }
+            );
+
+            // 5. Create transaction record for the income details
+            await databases.createDocument(
+              APPWRITE_CONFIG.databaseId!,
+              APPWRITE_CONFIG.collections.transactions!,
+              ID.unique(),
+              {
+                user_id: submission.user_id,
+                type: 'task',
+                amount: reward,
+                status: 'completed',
+                created_at: new Date().toISOString()
+              }
+            );
+          }
+        }
+
+        // 6. Update submission status
+        return await databases.updateDocument(
+          APPWRITE_CONFIG.databaseId!,
+          APPWRITE_CONFIG.collections.submissions!,
+          submissionId,
+          { status }
+        );
+      } catch (error) {
+        console.error("Appwrite approveTaskSubmission error:", error);
+        throw error;
+      }
     },
 
     getExchangeRequests: async (userId?: string) => {
@@ -539,11 +568,8 @@ export const appwriteService = {
 
     distributeROI: async (userId: string) => {
       try {
-<<<<<<< HEAD
         if (!isAppwriteConfigured()) return;
         
-=======
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         if (userId === "admin-trigger") {
           console.log("🚀 Starting Global ROI Distribution...");
           // Fetch all wallets
@@ -685,7 +711,6 @@ export const appwriteService = {
       try {
         const user = await databases.getDocument(APPWRITE_CONFIG.databaseId!, APPWRITE_CONFIG.collections.users!, userId) as any;
         const wallet = await appwriteService.db.getWallet(userId) as any as Wallet;
-<<<<<<< HEAD
         const settings = await appwriteService.db.getSettings() as any;
         
         const depositFeePercent = settings.deposit_fee || 0;
@@ -693,20 +718,11 @@ export const appwriteService = {
         const netAmount = parseFloat(amount.toString()) - feeAmount;
 
         console.log(`Activating/Updating user ${userId} with amount ${amount}. Net amount after ${depositFeePercent}% fee: ${netAmount}`);
-=======
-
-        console.log(`Activating/Updating user ${userId} with amount ${amount}. Current status: ${user.is_active}`);
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 
         // Case 1: User is already active
         if (user.is_active) {
           const currentBalance = parseFloat((wallet.balance || 0).toString());
-<<<<<<< HEAD
           await appwriteService.db.updateWallet(userId, currentBalance + netAmount);
-=======
-          const addAmount = parseFloat(amount.toString());
-          await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
           
           // Log Transaction
           try {
@@ -717,11 +733,7 @@ export const appwriteService = {
               {
                 user_id: userId,
                 type: 'exchange',
-<<<<<<< HEAD
                 amount: netAmount,
-=======
-                amount: addAmount,
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 status: 'completed',
                 created_at: new Date().toISOString()
               }
@@ -735,12 +747,7 @@ export const appwriteService = {
         // Case 2: Inactive but amount < 10
         if (parseFloat(amount.toString()) < 10) {
           const currentBalance = parseFloat((wallet.balance || 0).toString());
-<<<<<<< HEAD
           await appwriteService.db.updateWallet(userId, currentBalance + netAmount);
-=======
-          const addAmount = parseFloat(amount.toString());
-          await appwriteService.db.updateWallet(userId, currentBalance + addAmount);
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
           
           // Log Transaction
           try {
@@ -751,11 +758,7 @@ export const appwriteService = {
               {
                 user_id: userId,
                 type: 'exchange',
-<<<<<<< HEAD
                 amount: netAmount,
-=======
-                amount: addAmount,
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                 status: 'completed',
                 created_at: new Date().toISOString()
               }
@@ -777,11 +780,7 @@ export const appwriteService = {
         throw new Error(`Activation failed: Could not update user status. ${e.message}`);
       }
       
-<<<<<<< HEAD
         const remainingBalance = netAmount - 10;
-=======
-        const remainingBalance = parseFloat(amount.toString()) - 10;
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         const currentBalance = parseFloat((wallet.balance || 0).toString());
 
         if (remainingBalance > 0) {
@@ -800,11 +799,7 @@ export const appwriteService = {
           {
             user_id: userId,
             type: 'exchange',
-<<<<<<< HEAD
             amount: netAmount,
-=======
-            amount: parseFloat(amount.toString()),
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
             status: 'completed',
             created_at: new Date().toISOString()
           }
@@ -1234,11 +1229,8 @@ export const appwriteService = {
 
     getSettings: async () => {
       try {
-<<<<<<< HEAD
         if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
         
-=======
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         const response = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId!,
           'setting'
@@ -1258,7 +1250,6 @@ export const appwriteService = {
               admin_address_bep20: '0x7hQ8w7X9...bep20_demo',
               admin_address_erc20: '0xERC20...erc20_demo',
               telegram_link: 'https://t.me/cryptospiral',
-<<<<<<< HEAD
               marquee_text: 'Welcome to Genesis Core - The Future of Matrix Ecosystem',
               min_deposit: 10,
               min_withdrawal: 20,
@@ -1268,8 +1259,6 @@ export const appwriteService = {
               weekly_reward: 50,
               weekly_description: 'Top 5 Achievers with 5+ Directs',
               hall_of_fame_marquee: '🏆 CONGRATULATIONS TO OUR ELITE ACHIEVERS! KEEP PUSHING FOR THE TOP! 🚀',
-=======
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               updated_at: new Date().toISOString()
             }
           );
@@ -1301,15 +1290,11 @@ export const appwriteService = {
         console.error("Appwrite updateSettings error:", error);
         if (error.message?.includes('Unknown attribute')) {
           const attr = error.message.split('"')[1] || 'unknown';
-<<<<<<< HEAD
           let typeHint = "String";
           if (['usdt_buy_rate', 'usdt_sell_rate', 'min_deposit', 'min_withdrawal', 'max_withdrawal', 'deposit_fee', 'withdrawal_fee', 'weekly_reward'].includes(attr)) {
             typeHint = "Float/Double";
           }
           throw new Error(`Appwrite Error: Attribute "${attr}" is missing in your "setting" collection. Please add it in Appwrite Console as a ${typeHint} (String for marquee_text, hall_of_fame_marquee).`);
-=======
-          throw new Error(`Appwrite Error: Attribute "${attr}" is missing in your "setting" collection. Please add it in Appwrite Console as a String (admin_address_trc20, admin_address_bep20, admin_address_erc20).`);
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
         }
         throw error;
       }
@@ -1394,7 +1379,6 @@ export const appwriteService = {
         }
       }
       return repairedCount;
-<<<<<<< HEAD
     },
 
     resetWeeklyDirects: async () => {
@@ -1418,34 +1402,52 @@ export const appwriteService = {
     },
 
     getWeeklyOffer: async () => {
-      const settings = await appwriteService.db.getSettings() as any;
-      return {
-        id: 'weekly_offer',
-        reward_amount: settings.weekly_reward || 50,
-        description: settings.weekly_description || "Top 5 Achievers with 5+ Directs",
-        min_directs: 5,
-        is_active: true,
-        end_date: new Date(Date.now() + 86400000 * 3).toISOString()
-      };
+      try {
+        const settings = await appwriteService.db.getSettings() as any;
+        console.log('Appwrite getWeeklyOffer settings:', settings);
+        return {
+          id: 'weekly_offer',
+          reward_amount: settings && settings.weekly_reward !== undefined ? settings.weekly_reward : 50,
+          description: (settings && settings.weekly_description) || "Top 5 Achievers with 5+ Directs",
+          min_directs: 5,
+          is_active: true,
+          end_date: new Date(Date.now() + 86400000 * 3).toISOString()
+        };
+      } catch (error) {
+        console.error('Error in getWeeklyOffer, using defaults:', error);
+        return {
+          id: 'weekly_offer',
+          reward_amount: 50,
+          description: "Top 5 Achievers with 5+ Directs",
+          min_directs: 5,
+          is_active: true,
+          end_date: new Date(Date.now() + 86400000 * 3).toISOString()
+        };
+      }
     },
 
     getWeeklyAchievers: async () => {
-      const response = await databases.listDocuments(
-        APPWRITE_CONFIG.databaseId!,
-        APPWRITE_CONFIG.collections.users!,
-        [
-          Query.greaterThanEqual('weekly_directs', 5),
-          Query.orderDesc('weekly_directs'),
-          Query.limit(10)
-        ]
-      );
-      
-      return response.documents.map(u => ({
-        user_id: u.$id,
-        email: u.email,
-        count: u.weekly_directs,
-        status: u.last_reward_week === 'current' ? 'rewarded' : 'pending'
-      }));
+      try {
+        const response = await databases.listDocuments(
+          APPWRITE_CONFIG.databaseId!,
+          APPWRITE_CONFIG.collections.users!,
+          [
+            Query.greaterThanEqual('weekly_directs', 5),
+            Query.orderDesc('weekly_directs'),
+            Query.limit(10)
+          ]
+        );
+        
+        return response.documents.map(u => ({
+          user_id: u.$id,
+          email: u.email,
+          count: u.weekly_directs,
+          status: u.last_reward_week === 'current' ? 'rewarded' : 'pending'
+        }));
+      } catch (error) {
+        console.error('Error in getWeeklyAchievers, returning empty list:', error);
+        return [];
+      }
     },
 
     rewardAchiever: async (userId: string, amount: number) => {
@@ -1485,8 +1487,6 @@ export const appwriteService = {
           created_at: new Date().toISOString()
         }
       );
-=======
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
     }
   }
 };

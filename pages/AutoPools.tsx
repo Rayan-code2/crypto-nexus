@@ -2,23 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { mockApi } from '../lib/mockApi';
-<<<<<<< HEAD
 import { POOL_NAMES } from '../constants';
-=======
-
-const POOL_NAMES = [
-  "Genesis Core",
-  "Stellar Pulse",
-  "Nebula Drift",
-  "Galactic Surge",
-  "Supernova Blast",
-  "Cosmic Wave",
-  "Infinity Loop",
-  "Quantum Leap",
-  "Multiverse Gate",
-  "Omega Point"
-];
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 
 const AutoPools: React.FC<{ user: User }> = ({ user }) => {
   const [userPools, setUserPools] = useState<any[]>([]);
@@ -61,13 +45,8 @@ const AutoPools: React.FC<{ user: User }> = ({ user }) => {
         </div>
         <div className="flex items-center gap-4">
           {!isQualified && (
-<<<<<<< HEAD
             <div className="glass px-4 py-2 rounded-xl border border-primary/20 bg-primary/5">
               <p className="text-[10px] text-primary font-black uppercase tracking-widest">Qualification Pending</p>
-=======
-            <div className="glass px-4 py-2 rounded-xl border border-amber-500/20 bg-amber-500/5">
-              <p className="text-[10px] text-amber-500 font-black uppercase tracking-widest">Qualification Pending</p>
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               <p className="text-sm font-bold text-white">{isQualified ? 3 : (user.direct_count || 0)} / 3 Directs Required</p>
             </div>
           )}

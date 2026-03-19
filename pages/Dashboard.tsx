@@ -2,21 +2,14 @@
 import React, { useState, useMemo } from 'react';
 import { User, Wallet, Transaction } from '../types';
 import { mockApi } from '../lib/mockApi';
-<<<<<<< HEAD
 import { POOL_NAMES } from '../constants';
-=======
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, AreaChart, Area, LineChart, Line 
 } from 'recharts';
 import { 
   ArrowDownCircle, ArrowUpCircle, RefreshCcw, UserPlus, 
-<<<<<<< HEAD
-  Zap, Shield, Globe, Cpu, Trophy 
-=======
-  Zap, Shield, Globe, Cpu 
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
+  Zap, Shield, Globe, Cpu, Trophy, TrendingUp, ShieldCheck, Clock, Check 
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -37,13 +30,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
   const [liveBalance, setLiveBalance] = useState(wallet.balance);
   const [livePoolROI, setLivePoolROI] = useState(wallet.pool_roi_earned || 0);
   const [liveWalletROI, setLiveWalletROI] = useState(wallet.wallet_roi_earned || 0);
-  const [marqueeText, setMarqueeText] = useState('⚡ NODE ACTIVE: SYSTEM ONLINE | 💎 USDT/INR: ₹92.45 (+0.4%) | 🔥 NETWORK VOLUME: $4.2M | 🚀 NEW POOL 5 ENTRY FROM ID #8291');
-<<<<<<< HEAD
+  const [marqueeText, setMarqueeText] = useState('⚡ NODE ACTIVE: SYSTEM ACTIVE | 💎 USDT/INR: ₹92.45 (+0.4%) | 🔥 NETWORK VOLUME: $4.2M | 🚀 NEW POOL 5 ENTRY FROM ID #8291');
   const [hallOfFameMarquee, setHallOfFameMarquee] = useState('🏆 CONGRATULATIONS TO OUR ELITE ACHIEVERS! KEEP PUSHING FOR THE TOP! 🚀');
   const [weeklyOffer, setWeeklyOffer] = useState<any>(null);
   const [weeklyAchievers, setWeeklyAchievers] = useState<any[]>([]);
-=======
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   const isAdmin = user.role?.toLowerCase() === 'admin';
   
   const activePool = useMemo(() => 
@@ -60,7 +50,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
   React.useEffect(() => {
     const fetchSettings = async () => {
       try {
-<<<<<<< HEAD
         const settings = await mockApi.db.getSettings() as any;
         if (settings && settings.marquee_text) {
           setMarqueeText(settings.marquee_text);
@@ -68,12 +57,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
         if (settings && settings.hall_of_fame_marquee) {
           setHallOfFameMarquee(settings.hall_of_fame_marquee);
         }
-=======
-        const settings = await mockApi.db.getSettings();
-        if (settings && settings.marquee_text) {
-          setMarqueeText(settings.marquee_text);
-        }
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
       } catch (e) {
         console.error("Failed to fetch marquee settings", e);
       }
@@ -81,26 +64,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
     fetchSettings();
   }, []);
 
-<<<<<<< HEAD
   // Fetch Weekly Offer & Achievers
   React.useEffect(() => {
     const fetchOfferData = async () => {
       try {
+        console.log('Dashboard starting to fetch weekly offer data...');
         const [offer, achievers] = await Promise.all([
           mockApi.db.getWeeklyOffer(),
           mockApi.db.getWeeklyAchievers()
         ]);
+        console.log('Dashboard fetched weekly offer:', offer);
+        console.log('Dashboard fetched weekly achievers count:', achievers?.length || 0);
         setWeeklyOffer(offer);
         setWeeklyAchievers(achievers);
       } catch (e) {
-        console.error("Failed to fetch weekly offer data", e);
+        console.error("Failed to fetch weekly offer data in Dashboard", e);
       }
     };
     fetchOfferData();
   }, []);
 
-=======
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
   // Real-time Balance Growth Ticker (Dual ROI)
   React.useEffect(() => {
     const walletDailyRate = 0.002; // 0.20%
@@ -109,21 +92,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
     const walletRatePerSec = walletDailyRate / 86400;
     const poolRatePerSec = poolDailyRate / 86400;
     
+    // Capture start time to prevent "now - now" bug if last_roi_at is missing
+    const tickerStartTime = Date.now();
+
     const interval = setInterval(() => {
       const now = Date.now();
       let walletAccrued = 0;
       let poolAccrued = 0;
       
-      // Wallet Accrual (Only if balance > 0)
-      if (wallet.balance > 0) {
-        const lastWalletROI = wallet.last_roi_at ? new Date(wallet.last_roi_at).getTime() : now;
+      // Wallet Accrual (Only if balance > 0 and user is active)
+      if (wallet.balance > 0 && user.is_active) {
+        const lastWalletROI = wallet.last_roi_at ? new Date(wallet.last_roi_at).getTime() : tickerStartTime;
         const walletSecs = (now - lastWalletROI) / 1000;
         walletAccrued = wallet.balance * walletRatePerSec * walletSecs;
       }
       
-      // Pool Accrual (Only if user is in Pool 1 and it's active)
+      // Pool Accrual (Only if user is in Pool 1, it's active, and user is active)
       const pool1 = pools.find(p => p.pool_number === 1 && p.status === 'active');
-      if (pool1) {
+      if (pool1 && user.is_active) {
         const lastPoolROI = wallet.last_pool_roi_at ? new Date(wallet.last_pool_roi_at).getTime() : new Date(pool1.created_at).getTime();
         const poolSecs = (now - lastPoolROI) / 1000;
         poolAccrued = 10 * poolRatePerSec * poolSecs; // 0.5% of $10
@@ -132,7 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
       setLiveBalance(wallet.balance + walletAccrued + poolAccrued);
       setLivePoolROI((wallet.pool_roi_earned || 0) + poolAccrued);
       setLiveWalletROI((wallet.wallet_roi_earned || 0) + walletAccrued);
-    }, 1000);
+    }, 100);
 
     return () => clearInterval(interval);
   }, [wallet.balance, wallet.last_roi_at, wallet.last_pool_roi_at, user.is_active, pools]);
@@ -154,7 +140,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
     <div className="space-y-4 animate-in fade-in zoom-in-95 duration-500 pb-10">
       
       {/* TICKER - OPTIMIZED WITH FADE EDGES */}
-      <div className="w-[calc(100%+2rem)] -mx-4 sm:w-[calc(100%+3rem)] sm:-mx-6 overflow-hidden bg-primary/5 border-y border-white/5 py-2 mb-0 backdrop-blur-sm sticky top-[68px] z-30 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+      <div className="w-[calc(100%+2rem)] -mx-4 sm:w-[calc(100%+3rem)] sm:-mx-6 -mt-4 sm:-mt-6 overflow-hidden bg-primary/5 border-y border-white/5 py-2 mb-0 backdrop-blur-sm sticky top-[68px] z-30 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
         <div className="flex whitespace-nowrap animate-marquee gap-12 text-[9px] font-black uppercase tracking-widest text-primary/80 px-4 sm:px-6">
           <span>{marqueeText}</span>
           <span>{marqueeText}</span>
@@ -163,182 +149,116 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-<<<<<<< HEAD
-        {/* HERO CARD - GLOSSY THEMED VAULT */}
+        {/* HERO CARD - CYBER-VAULT REDESIGN */}
         <section className="lg:col-span-7 relative group">
-          <div className="relative overflow-hidden rounded-[3rem] p-8 sm:p-10 bg-darker border border-primary/20 shadow-[0_0_40px_rgba(6,182,212,0.15)] min-h-[320px] flex flex-col justify-between transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_60px_rgba(6,182,212,0.25)]">
+          <div className="relative overflow-hidden rounded-[2.5rem] sm:rounded-[3.5rem] p-6 sm:p-10 bg-[#0a0a0c] border-2 border-primary/30 shadow-[0_0_50px_rgba(6,182,212,0.2)] min-h-[320px] sm:min-h-[350px] flex flex-col justify-between transition-all duration-500 hover:border-primary/60 hover:shadow-[0_0_80px_rgba(6,182,212,0.3)]">
             
-            {/* GLOSSY OVERLAY EFFECT */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-primary/5 opacity-50"></div>
+            {/* HOLOGRAPHIC MESH BACKGROUND */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.15),transparent_70%)]"></div>
+            <div className="absolute inset-0 opacity-[0.05] pointer-events-none bg-[linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
             
-            {/* DYNAMIC THEMED BACKGROUND ELEMENTS */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 blur-[130px] rounded-full group-hover:bg-primary/20 transition-all duration-1000"></div>
+            {/* DYNAMIC NEON GLOWS */}
+            <div className="absolute -top-24 -right-24 w-80 h-80 bg-primary/30 blur-[100px] rounded-full"></div>
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/20 blur-[80px] rounded-full"></div>
             
-            {/* SCANNING LINE EFFECT */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(6,182,212,0.05),rgba(6,182,212,0.02),rgba(6,182,212,0.05))] bg-[length:100%_2px,3px_100%]"></div>
-            
-            {/* TOP SECTION: USER INFO & UNIQUE CHIP */}
-            <div className="flex justify-between items-start relative z-10">
-              <div className="space-y-1">
+            {/* TOP BAR: BRANDING & CHIP */}
+            <div className="flex justify-between items-center relative z-10">
+              <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_#06b6d4]"></div>
-                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Voyager Protocol v2.0</p>
+                  <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_#06b6d4]"></div>
+                  <span className="text-[10px] font-black text-primary uppercase tracking-[0.5em] italic">Spiral Protocol</span>
                 </div>
-                <h2 className="text-lg font-black text-white tracking-tighter uppercase italic">
-                  Agent <span className="text-primary">{user.email.split('@')[0]}</span>
-                </h2>
-                <div className="flex items-center gap-2 opacity-60">
-                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Access Level: Elite</span>
-                  <div className="w-1 h-1 rounded-full bg-primary/30"></div>
-                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Node: {user.id.slice(0, 6)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">v2.0.4-Stable</span>
+                  <div className="w-1 h-1 rounded-full bg-slate-700"></div>
+                  <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">Encrypted</span>
                 </div>
               </div>
 
-              {/* UNIQUE FUTURISTIC CHIP */}
-              <div className="w-14 h-9 sm:w-16 sm:h-10 bg-gradient-to-br from-amber-200 via-amber-500 to-amber-700 rounded-xl shadow-[0_0_40px_rgba(251,191,36,0.4)] border border-white/30 flex items-center justify-center overflow-hidden group-hover:scale-110 transition-transform duration-500 relative">
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                <div className="absolute inset-0 opacity-40">
-                  <div className="absolute top-1/2 left-0 w-full h-[1px] bg-black/20"></div>
-                  <div className="absolute top-0 left-1/2 w-[1px] h-full bg-black/20"></div>
-                </div>
-                <div className="w-10 h-6 sm:w-12 sm:h-8 border border-white/40 rounded-lg bg-black/10 backdrop-blur-md relative flex items-center justify-center">
-                  <div className="w-3 h-3 bg-amber-300 rounded-full blur-[4px] animate-pulse"></div>
+              {/* THE "CORE" CHIP */}
+              <div className="relative group/chip">
+                <div className="absolute -inset-2 bg-primary/20 blur-lg rounded-full opacity-0 group-hover/chip:opacity-100 transition-opacity"></div>
+                <div className="w-14 h-10 sm:w-18 sm:h-12 bg-gradient-to-br from-slate-800 to-slate-950 rounded-xl border border-white/10 flex items-center justify-center relative overflow-hidden shadow-2xl">
+                  <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-[shimmer_3s_infinite]"></div>
+                  <div className="grid grid-cols-3 gap-1 opacity-40">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-primary/50 rounded-sm"></div>
+                    ))}
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-4 h-4 sm:w-6 sm:h-6 bg-primary/20 rounded-full blur-md"></div>
+                    <Cpu size={14} className="text-primary relative z-10" />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* MIDDLE SECTION: CENTERED BALANCE & POOL BADGE */}
-            <div className="relative z-10 my-6 flex flex-col items-center text-center">
-              <div className="flex flex-col items-center gap-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">Vault Liquidity</p>
-                  {isLive && (
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] font-black animate-pulse tracking-widest">
-                      SYNCED
+            {/* MAIN CONTENT: BALANCE DISPLAY */}
+            <div className="relative z-10 flex flex-col items-center sm:items-start mt-4 sm:mt-0">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-slate-600 hidden sm:block"></div>
+                <p className="text-slate-400 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.3em]">Available Liquidity</p>
+                <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-slate-600 hidden sm:block"></div>
+              </div>
+
+              <div className="flex flex-col items-center sm:items-start gap-1">
+                <div className="relative flex items-baseline">
+                  <span className="text-5xl sm:text-7xl font-black tracking-tighter text-[#FFD700] drop-shadow-[0_0_20px_rgba(255,215,0,0.3)]">
+                    ${liveBalance?.toFixed(2) || '0.00'}
+                  </span>
+                  <div className="ml-2 flex flex-col items-start">
+                    <span className="text-[#FFD700] font-black text-xs sm:text-sm italic tracking-tighter">USDT</span>
+                    <span className="text-[#FFD700]/80 text-[10px] sm:text-[12px] font-mono tracking-tighter tabular-nums">
+                      {liveBalance?.toFixed(6).split('.')[1] || '000000'}
                     </span>
-                  )}
+                  </div>
                 </div>
                 
-                {wallet.hold_balance > 0 && (
-                  <div className="group/pool relative">
-                    <div className="absolute inset-0 bg-amber-500/20 blur-md rounded-full animate-pulse"></div>
-                    <div className="relative flex items-center gap-2 bg-black/40 px-4 py-1.5 rounded-full border border-amber-500/30 backdrop-blur-md">
-                      <Zap size={10} className="text-amber-500" />
-                      <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Pool Reserve: ${wallet.hold_balance}</span>
-                    </div>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md">
+                    <TrendingUp size={12} className="text-emerald-400" />
+                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">+0.20% Daily</span>
+                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-ping ml-1"></div>
                   </div>
-                )}
-              </div>
-
-              <div className="relative">
-                <div className="absolute -inset-8 bg-gradient-to-r from-primary/10 to-secondary/10 blur-3xl rounded-full animate-pulse"></div>
-                <div className="relative flex items-baseline gap-2">
-                  <span className="text-3xl sm:text-4xl font-black tracking-tighter text-white drop-shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-                    ${liveBalance?.toFixed(6) || '0.000000'}
-                  </span>
-                  <span className="text-primary font-black text-[10px] italic tracking-widest">USDT</span>
-                </div>
-              </div>
-              
-              <div className="mt-4 flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
-                  <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Yield: 0.20%</span>
-                </div>
-                <div className="w-[1px] h-3 bg-white/10"></div>
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Auto-Compounding</span>
-              </div>
-            </div>
-
-            {/* BOTTOM SECTION: ID & ACTIVE STATUS - SYMMETRICAL LAYOUT */}
-            <div className="grid grid-cols-2 gap-4 relative z-10 pt-5 border-t border-white/10">
-              {/* NODE SIGNATURE BOX */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Node Signature</span>
-                <div className="flex items-center gap-2 bg-white/5 px-3 h-11 rounded-xl border border-white/5 backdrop-blur-sm group/node hover:border-primary/30 transition-all">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-600 group-hover/node:bg-primary transition-colors shrink-0"></div>
-                  <span className="font-mono text-[9px] sm:text-[10px] text-slate-300 tracking-[0.1em] truncate">
-                    {user.id.toUpperCase().slice(0, 4)} •••• {user.id.toUpperCase().slice(-4)}
-                  </span>
-                </div>
-              </div>
-
-              {/* ACTIVE STATUS BOX */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">System Status</span>
-                <div className="flex items-center gap-3 bg-white/5 px-3 h-11 rounded-xl border border-white/5 group/status hover:bg-white/10 transition-all cursor-default">
-                  <div className="relative flex items-center justify-center shrink-0">
-                    <div className={`absolute inset-0 blur-md rounded-full transition-all duration-700 ${user.is_active ? 'bg-primary/30 group-hover/status:bg-primary/50' : 'bg-red-500/30'}`}></div>
-                    <div className={`w-2.5 h-2.5 rounded-full border border-white/20 relative z-10 ${user.is_active ? 'bg-primary animate-pulse shadow-[0_0_8px_#06b6d4]' : 'bg-red-500 shadow-[0_0_8px_#ef4444]'}`}></div>
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className={`text-[10px] font-black uppercase tracking-widest truncate ${user.is_active ? 'text-white' : 'text-red-500'}`}>
-                        {user.is_active ? 'Active' : 'Offline'}
-                      </span>
-                      {user.is_active && <div className="w-1 h-1 rounded-full bg-primary animate-ping shrink-0"></div>}
-                    </div>
-                    <span className="text-[6px] font-bold text-slate-600 uppercase tracking-widest truncate">Protocol: Secure</span>
-                  </div>
-                </div>
-=======
-        {/* HERO CARD */}
-        <section className="lg:col-span-7 relative">
-          <div className="relative overflow-hidden rounded-[2.5rem] p-6 sm:p-8 bg-gradient-to-br from-slate-900 via-darker to-slate-900 border border-white/10 shadow-2xl min-h-[220px] flex flex-col justify-between group">
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-[100px] rounded-full group-hover:bg-primary/30 transition-all"></div>
-            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/20 blur-[100px] rounded-full"></div>
-            
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1">Elite Spiral Voyager</p>
-                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Agent {user.email.split('@')[0]}</h2>
-              </div>
-              <div className="w-12 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-md opacity-80 flex items-center justify-center shadow-lg">
-                <div className="w-8 h-6 border border-black/20 rounded-sm"></div>
-              </div>
-            </div>
-
-            <div className="relative z-10 my-4">
-              <div className="flex justify-between items-center mb-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Live Vault Balance</p>
-                  {isLive && (
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[7px] font-black animate-pulse">
-                      LIVE
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
                   {wallet.hold_balance > 0 && (
-                    <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                      <span className="text-[7px] font-black text-amber-500 uppercase tracking-widest">Held for Pool: ${wallet.hold_balance}</span>
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 backdrop-blur-md">
+                      <ShieldCheck size={12} className="text-amber-400" />
+                      <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Reserve: ${wallet.hold_balance}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                    <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Growth Active</span>
-                  </div>
                 </div>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black tracking-tighter text-white">${liveBalance?.toFixed(6) || '0.000000'}</span>
-                <span className="text-primary font-black text-xs uppercase tracking-widest">USDT</span>
-              </div>
-              <p className="text-[8px] text-slate-600 font-bold uppercase mt-1">Daily Yield: 0.20% (Auto-Compounding)</p>
             </div>
 
-            <div className="flex justify-between items-end relative z-10">
-              <div className="font-mono text-[10px] text-slate-500 tracking-[0.2em]">
-                {user.id.toUpperCase().slice(0, 4)} •••• •••• {user.id.toUpperCase().slice(-4)}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${user.is_active ? 'bg-primary/20' : 'bg-red-500/20'}`}>
-                  <div className={`w-2 h-2 rounded-full ${user.is_active ? 'bg-primary animate-pulse' : 'bg-red-500'}`}></div>
+            {/* FOOTER: SYSTEM SPECS */}
+            <div className="relative z-10 grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/5">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-3 bg-primary rounded-full"></div>
+                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Node Signature</span>
                 </div>
-                <span className={`text-[10px] font-black uppercase ${user.is_active ? 'text-primary' : 'text-red-500'}`}>
-                  {user.is_active ? 'Active Node' : 'Inactive Node'}
-                </span>
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
+                <div className="bg-white/5 p-3 rounded-2xl border border-white/5 flex items-center justify-between group/sig hover:bg-white/10 transition-all">
+                  <span className="font-mono text-[10px] text-slate-300 tracking-widest">
+                    {user.id.toUpperCase().slice(0, 8)}
+                  </span>
+                  <div className="w-2 h-2 rounded-full bg-primary/40 group-hover/sig:bg-primary transition-all"></div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-3 bg-secondary rounded-full"></div>
+                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">System Status</span>
+                </div>
+                <div className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${user.is_active ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                  <div className="flex flex-col">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${user.is_active ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {user.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                    <span className="text-[6px] font-bold text-slate-600 uppercase">Protocol Secure</span>
+                  </div>
+                  <div className={`w-2 h-2 rounded-full ${user.is_active ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`}></div>
+                </div>
               </div>
             </div>
           </div>
@@ -375,11 +295,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
               <div 
                 key={i} 
                 onClick={() => onNavigate?.('income')}
-<<<<<<< HEAD
                 className="bg-slate-900/60 p-4 rounded-3xl border border-white/5 relative overflow-hidden group hover:bg-slate-800/80 transition-all cursor-pointer will-change-transform text-center"
-=======
-                className="bg-slate-900/60 p-4 rounded-3xl border border-white/5 relative overflow-hidden group hover:bg-slate-800/80 transition-all cursor-pointer will-change-transform"
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
               >
                 <h3 className="text-slate-500 text-[8px] font-black uppercase tracking-[0.2em] mb-1">{stat.label}</h3>
                 <p className={`text-lg font-black tracking-tighter ${stat.color}`}>{stat.value}</p>
@@ -389,268 +305,169 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
           </div>
         </section>
 
-<<<<<<< HEAD
-        {/* WEEKLY OFFER WALL - THEME-ALIGNED PREMIUM DESIGN */}
+        {/* MISSION CENTER: WEEKLY ARENA - COMPACT & HIGH-DENSITY REDESIGN */}
         <div className="lg:col-span-5 flex flex-col gap-6">
-            <div className="relative group overflow-hidden rounded-[2.5rem] p-0 bg-slate-900/40 border border-white/5 shadow-xl shadow-primary/5 transition-all duration-700 hover:shadow-[0_0_80px_rgba(6,182,212,0.15)]">
-              {/* Luxury Background Elements */}
-              <div className="absolute top-0 right-0 w-48 md:w-64 h-48 md:h-64 bg-primary/5 blur-[80px] md:blur-[100px] rounded-full group-hover:bg-primary/10 transition-all duration-1000"></div>
+            <div className="relative group overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] p-0 bg-slate-950/90 border-2 border-primary/20 shadow-2xl transition-all duration-700 hover:border-primary/50">
               
-              {/* Header: Premium Badge */}
-              <div className="bg-white/5 border-b border-white/5 px-5 md:px-8 py-4 md:py-5 flex justify-between items-center">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                    <Trophy className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+              {/* CYBER BACKGROUND ELEMENTS */}
+              <div className="absolute top-0 right-0 w-full h-full opacity-20 pointer-events-none">
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary/20 blur-[80px] rounded-full"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.05),transparent_70%)]"></div>
+              </div>
+
+              {/* HEADER: COMPACT MISSION CONTROL */}
+              <div className="relative z-10 bg-white/5 border-b border-white/5 px-5 py-4 sm:px-8 sm:py-6 flex justify-between items-center">
+                <div className="flex items-center gap-3 sm:gap-5">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-primary/30 blur-lg rounded-full"></div>
+                    <div className="relative w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-slate-900 border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                      <Trophy className="w-5 h-5 sm:w-7 sm:h-7 text-primary" />
+                    </div>
                   </div>
                   <div>
-                    <span className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-[0.2em] md:tracking-[0.3em] block">Top 5 Achiever with 5+ Direct</span>
-                    <h3 className="text-white font-black text-sm md:text-lg italic uppercase tracking-tighter leading-none mt-0.5">Weekly Championship</h3>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></div>
+                      <span className="text-[8px] sm:text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Live Arena</span>
+                    </div>
+                    <h3 className="text-white font-black text-lg sm:text-2xl italic uppercase tracking-tighter leading-none">Weekly Arena</h3>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 px-2 md:px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span className="text-[7px] md:text-[9px] font-black text-emerald-500 uppercase tracking-widest">Active</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-[7px] sm:text-[8px] font-black text-primary uppercase tracking-widest mb-0.5">Prize Pool</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-xl sm:text-3xl font-black text-amber-400 italic tracking-tighter drop-shadow-[0_0_12px_rgba(251,191,36,0.4)]">
+                      ${weeklyOffer?.reward_amount || 0}
+                    </span>
+                    <span className="text-[8px] text-slate-500 font-bold uppercase">USDT</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-4 md:p-6 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                  {/* Left Side: The Trophy & Progress */}
-                  <div className="flex flex-col items-center md:items-start space-y-4 md:space-y-6">
-                    <div className="relative">
-                      {/* Glowing Aura for Trophy */}
-                      <div className="absolute inset-0 bg-primary/10 blur-xl md:blur-2xl rounded-full animate-pulse"></div>
-                      
-                      <div className="relative w-28 h-28 md:w-36 md:h-36 flex items-center justify-center">
-                        {/* Progress Ring */}
-                        <svg className="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 128 128">
-                          <circle
-                            cx="64" cy="64" r="60"
-                            fill="transparent"
-                            stroke="rgba(255,255,255,0.03)"
-                            strokeWidth="4"
-                          />
-                          <circle
-                            cx="64" cy="64" r="60"
-                            fill="transparent"
-                            stroke="url(#themeGradient)"
-                            strokeWidth="6"
-                            strokeDasharray="377"
-                            strokeDashoffset={377 - (Math.min(user.weekly_directs || 0, 5) / 5) * 377}
-                            strokeLinecap="round"
-                            className="transition-all duration-1000 ease-out"
-                          />
-                          <defs>
-                            <linearGradient id="themeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#06b6d4" />
-                              <stop offset="100%" stopColor="#a855f7" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-
-                        {/* Large Trophy Icon */}
-                        <div className="relative z-10 flex flex-col items-center">
-                          <Trophy className="w-10 h-10 md:w-12 md:h-12 text-primary mb-0.5 md:mb-1" />
-                          <div className="flex flex-col items-center">
-                            <span className="text-2xl md:text-3xl font-black text-white italic leading-none tracking-tighter">
-                              {user.weekly_directs || 0}<span className="text-xs md:text-sm text-slate-500 not-italic">/5</span>
-                            </span>
-                            <span className="text-[7px] md:text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] md:tracking-[0.3em] mt-0.5">Directs</span>
-                          </div>
-                        </div>
+              <div className="p-5 sm:p-8 relative z-10">
+                {/* COMPACT PROGRESS GRID */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  
+                  {/* PROGRESS RING - SCALED FOR MOBILE */}
+                  <div className="bg-white/5 rounded-3xl p-4 sm:p-6 border border-white/10 flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-4 relative overflow-hidden group/card">
+                    <div className="relative w-20 h-20 sm:w-32 sm:h-32 flex items-center justify-center shrink-0">
+                      <svg className="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 128 128">
+                        <circle cx="64" cy="64" r="58" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
+                        <circle
+                          cx="64" cy="64" r="58"
+                          fill="transparent"
+                          stroke="url(#arenaGradient)"
+                          strokeWidth="10"
+                          strokeDasharray="364"
+                          strokeDashoffset={364 - (Math.min(user.weekly_directs || 0, 5) / 5) * 364}
+                          strokeLinecap="round"
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      </svg>
+                      <div className="flex flex-col items-center">
+                        <span className="text-2xl sm:text-4xl font-black text-white italic tracking-tighter">{user.weekly_directs || 0}</span>
+                        <span className="text-[7px] sm:text-[8px] font-black text-slate-500 uppercase tracking-widest">Directs</span>
                       </div>
+                    </div>
+                    <div className="text-right sm:text-center flex-1">
+                      <p className="text-[9px] sm:text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Mission Progress</p>
+                      <p className="text-[11px] sm:text-sm font-black text-white italic uppercase tracking-tighter">
+                        {5 - (user.weekly_directs || 0) > 0 
+                          ? `${5 - (user.weekly_directs || 0)} More to Qualify` 
+                          : "Mission Accomplished!"}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 md:gap-3">
-                    {/* Reward & Status in a row on mobile */}
-                    <div className="grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-3">
-                      {/* Reward Card */}
-                      <div className="relative overflow-hidden bg-darker/40 border border-white/5 rounded-[1.2rem] md:rounded-[1.5rem] p-3 md:p-4 transition-all hover:border-primary/20 group/card flex flex-col items-center text-center">
-                        <div className="absolute top-0 right-0 p-2 md:p-3 opacity-5 md:opacity-10 group-hover/card:opacity-20 transition-opacity">
-                          <Zap className="w-6 h-6 md:w-8 md:h-8 text-primary" />
-                        </div>
-                        <span className="text-[6px] md:text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-0.5">Reward</span>
-                        <div className="flex items-baseline gap-0.5 md:gap-1">
-                          <span className="text-xl md:text-2xl font-black text-primary italic tracking-tighter">${weeklyOffer?.reward_amount || 0}</span>
-                          <span className="text-white/40 font-bold text-[7px] md:text-[10px] uppercase">USDT</span>
-                        </div>
-                      </div>
 
-                      {/* Status Card */}
-                      <div className="bg-darker/40 border border-white/5 rounded-[1.2rem] md:rounded-[1.5rem] p-3 md:p-4 flex flex-col items-center text-center gap-2 md:gap-3 transition-all hover:bg-white/5">
-                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center shadow-inner ${
-                          (user.weekly_directs || 0) >= 5 
-                          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
-                          : "bg-primary/10 text-primary border border-primary/20"
+                  {/* STATUS & TIMER - STACKED COMPACTLY */}
+                  <div className="flex flex-col gap-3 sm:gap-4">
+                    <div className={`rounded-3xl p-4 border flex items-center gap-4 transition-all ${
+                      (user.weekly_directs || 0) >= 5 
+                        ? 'bg-emerald-500/10 border-emerald-500/20' 
+                        : 'bg-white/5 border-white/10'
+                    }`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        (user.weekly_directs || 0) >= 5 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-primary/20 text-primary'
+                      }`}>
+                        <Shield className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block">Status</span>
+                        <h4 className={`text-sm sm:text-lg font-black italic uppercase tracking-tighter ${
+                          (user.weekly_directs || 0) >= 5 ? 'text-emerald-500' : 'text-white'
                         }`}>
-                          <Shield className="w-4 h-4 md:w-5 md:h-5" />
-                        </div>
-                        <div className="hidden sm:block">
-                          <span className="text-[6px] md:text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-0.5">Status</span>
-                          <p className={`text-xs md:text-sm font-black italic uppercase leading-none ${
-                            (user.weekly_directs || 0) >= 5 ? "text-emerald-500" : "text-white"
-                          }`}>
-                            {(user.weekly_directs || 0) >= 5 ? "Qualified" : "Pending"}
-                          </p>
-                        </div>
-                        <div className="sm:hidden">
-                           <p className={`text-[10px] font-black italic uppercase leading-none ${
-                            (user.weekly_directs || 0) >= 5 ? "text-emerald-500" : "text-white"
-                          }`}>
-                            {(user.weekly_directs || 0) >= 5 ? "Done" : "Wait"}
-                          </p>
-                        </div>
+                          {(user.weekly_directs || 0) >= 5 ? "Elite Qualified" : "In Progress"}
+                        </h4>
                       </div>
                     </div>
 
-                    {/* Countdown Card */}
-                    <div className="bg-primary rounded-[1.2rem] md:rounded-[1.5rem] p-3 md:p-4 shadow-lg shadow-primary/10 relative overflow-hidden group/timer flex flex-col items-center text-center">
-                      <div className="absolute -right-3 -bottom-3 opacity-10 group-hover/timer:scale-110 transition-transform duration-700">
-                        <RefreshCcw className="w-12 h-12 md:w-16 md:h-16 text-black" />
+                    <div className="bg-amber-500/10 rounded-3xl p-4 border border-amber-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Clock className="w-5 h-5 text-amber-500" />
+                        <div>
+                          <span className="text-[8px] font-black text-amber-500/60 uppercase tracking-widest block">Arena Closes</span>
+                          <span className="text-[11px] sm:text-xs font-black text-amber-400 italic uppercase">
+                            {weeklyOffer?.end_date ? new Date(weeklyOffer.end_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'Syncing...'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="relative z-10 flex flex-col items-center">
-                        <span className="text-[6px] md:text-[8px] font-black text-black/60 uppercase tracking-widest block mb-0.5">Cycle Ends In</span>
-                        <p className="text-sm md:text-lg font-black text-darker italic uppercase tracking-tighter">
-                          {weeklyOffer?.end_date ? new Date(weeklyOffer.end_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'Calculating...'}
-                        </p>
-                      </div>
+                      <RefreshCcw className="w-4 h-4 text-amber-500/30 animate-spin-slow" />
                     </div>
                   </div>
                 </div>
 
-                {/* Elite Achievers Marquee - Refined */}
-                <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/10">
-                  <div className="flex items-center justify-between mb-2 md:mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(6,182,212,0.8)]"></div>
-                      <span className="text-[7px] md:text-[9px] font-black text-white uppercase tracking-[0.3em] md:tracking-[0.4em]">Hall of Fame</span>
-                    </div>
-                    <span className="text-[6px] md:text-[8px] font-bold text-primary/60 uppercase tracking-widest">Live</span>
+                {/* MISSION OBJECTIVES - FILLS THE "EMPTY" FEELING */}
+                <div className="mt-6 p-4 bg-white/5 rounded-3xl border border-white/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap size={10} className="text-primary" />
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Mission Objectives</span>
                   </div>
-                  
-                  <div className="relative overflow-hidden h-8 md:h-10 flex items-center bg-gradient-to-r from-transparent via-white/5 to-transparent rounded-lg md:rounded-xl border-x border-white/5">
-                    <div className="flex gap-6 md:gap-10 animate-marquee whitespace-nowrap px-4 md:px-6">
-                      <span className="text-[9px] font-black text-primary uppercase tracking-widest italic mr-4">
-                        {hallOfFameMarquee}
-                      </span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full ${user.weekly_directs >= 1 ? 'bg-primary' : 'bg-slate-800'}`}></div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Recruit 5 Nodes</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Top 5 Ranking</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-primary' : 'bg-slate-800'}`}></div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Active Protocol</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Weekly Reset</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ELITE ACHIEVERS: HALL OF FAME - COMPACT MARQUEE */}
+                <div className="mt-6 pt-6 border-t border-white/5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1 h-3 bg-primary rounded-full"></div>
+                      <h4 className="text-[9px] sm:text-[10px] font-black text-white uppercase tracking-[0.3em]">Hall of Fame</h4>
+                    </div>
+                    <span className="text-[7px] font-black text-primary uppercase tracking-widest">Live Feed</span>
+                  </div>
+
+                  <div className="relative overflow-hidden h-12 flex items-center bg-slate-900/40 rounded-2xl border border-white/5">
+                    <div className="flex gap-6 animate-marquee whitespace-nowrap">
                       {weeklyAchievers.length > 0 ? (
-                        weeklyAchievers.map((achiever, i) => (
-                          <div key={i} className="flex items-center gap-2 group/achiever bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                            <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[7px] md:text-[9px] font-black text-primary italic">
-                              {i+1}
+                        [...weeklyAchievers, ...weeklyAchievers].map((achiever, i) => (
+                          <div key={i} className="flex items-center gap-3 bg-white/5 px-4 py-1.5 rounded-xl border border-white/5 hover:border-primary/30 transition-all cursor-default group/item">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-[10px] font-black text-white italic shadow-lg">
+                              {i % weeklyAchievers.length + 1}
                             </div>
-                            <span className="text-white font-bold text-[9px] md:text-[11px] tracking-tight">{achiever.email.split('@')[0]}</span>
-                            <div className="px-1 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary font-black text-[6px] md:text-[8px] uppercase">
-                              {achiever.count}
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-black text-white uppercase tracking-tighter leading-none">{achiever.email.split('@')[0]}</span>
+                              <span className="text-[7px] font-bold text-primary uppercase tracking-widest mt-0.5">{achiever.count} Directs</span>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <span className="text-slate-600 text-[7px] md:text-[9px] font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] italic">Awaiting champions...</span>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic px-6">Arena is heating up... Be the first to qualify!</span>
                       )}
-                      {/* Duplicate for seamless loop */}
-                      {weeklyAchievers.length > 0 && weeklyAchievers.map((achiever, i) => (
-                        <div key={`dup-${i}`} className="flex items-center gap-2 md:gap-3 bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                          <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[7px] md:text-[9px] font-black text-primary italic">
-                            {i+1}
-                          </div>
-                          <span className="text-white font-bold text-[9px] md:text-[11px] tracking-tight">{achiever.email.split('@')[0]}</span>
-                          <div className="px-1 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary font-black text-[6px] md:text-[8px] uppercase">
-                            {achiever.count}
-                          </div>
-                        </div>
-                      ))}
-=======
-          {/* EVOLUTION STATUS CARD - REDESIGNED */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            <div className="relative group overflow-hidden rounded-[2.5rem] p-8 bg-slate-900/60 border border-white/5 backdrop-blur-md will-change-transform">
-              {/* Background Decorative Elements */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 blur-[60px] rounded-full group-hover:bg-secondary/20 transition-all duration-700"></div>
-              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/5 blur-[80px] rounded-full"></div>
-              
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-8">
-                  <div>
-                    <h3 className="text-white text-xs font-black uppercase tracking-[0.4em] mb-1">Evolution Protocol</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-                      <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest">System Sync: 98.4%</p>
-                    </div>
-                  </div>
-                  <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
-                    <span className="text-[10px] font-black text-secondary italic">TIER 04</span>
-                    <div className="w-[1px] h-3 bg-white/10"></div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Elite</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-8">
-                  {/* Futuristic Progress Ring */}
-                  <div className="relative w-32 h-32 flex-shrink-0">
-                    <svg className="w-full h-full transform -rotate-90">
-                      {/* Outer Glow Ring */}
-                      <circle cx="64" cy="64" r="58" stroke="rgba(168,85,247,0.05)" strokeWidth="8" fill="transparent" />
-                      {/* Background Track */}
-                      <circle cx="64" cy="64" r="52" stroke="rgba(255,255,255,0.03)" strokeWidth="12" fill="transparent" />
-                      {/* Segmented Progress */}
-                      <circle 
-                        cx="64" cy="64" r="52" 
-                        stroke="url(#grad-evolution)" 
-                        strokeWidth="12" 
-                        fill="transparent" 
-                        strokeDasharray="326.7" 
-                        strokeDashoffset="81.6" 
-                        strokeLinecap="round"
-                        className="drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]"
-                      />
-                      <defs>
-                        <linearGradient id="grad-evolution" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#a855f7" />
-                          <stop offset="100%" stopColor="#06b6d4" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-black text-white italic tracking-tighter leading-none">75<span className="text-xs text-secondary">%</span></span>
-                      <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-1">Sync Rate</span>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 w-full space-y-5">
-                    <div>
-                      <p className="text-2xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-500 uppercase leading-none mb-1">Spiral Voyager</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Next Phase:</span>
-                        <span className="text-[10px] font-black text-secondary uppercase tracking-widest italic">Spiral Prime</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-500">
-                        <span>XP Progress</span>
-                        <span className="text-white">1,250 / 2,000 XP</span>
-                      </div>
-                      <div className="h-2 w-full bg-white/5 rounded-full p-[2px] border border-white/5">
-                        <div className="h-full bg-gradient-to-r from-secondary to-primary rounded-full w-[75%] relative">
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white shadow-[0_0_10px_#fff] rounded-full"></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="flex-1 bg-white/5 rounded-xl p-2 border border-white/5 text-center">
-                        <p className="text-[7px] font-bold text-slate-500 uppercase mb-0.5">Directs</p>
-                        <p className="text-xs font-black text-white">{user.direct_count || 0}</p>
-                      </div>
-                      <div className="flex-1 bg-white/5 rounded-xl p-2 border border-white/5 text-center">
-                        <p className="text-[7px] font-bold text-slate-500 uppercase mb-0.5">Network</p>
-                        <p className="text-xs font-black text-white">1.2K</p>
-                      </div>
-                      <div className="flex-1 bg-white/5 rounded-xl p-2 border border-white/5 text-center">
-                        <p className="text-[7px] font-bold text-slate-500 uppercase mb-0.5">Uptime</p>
-                        <p className="text-xs font-black text-white">14D</p>
-                      </div>
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                     </div>
                   </div>
                 </div>
@@ -665,7 +482,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                   <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Invite Protocol</h3>
                 </div>
                 <span className={`text-[8px] px-2 py-1 rounded-full font-black uppercase tracking-widest ${user.is_active ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'}`}>
-                  {user.is_active ? 'Engine Online' : 'Engine Offline'}
+                  {user.is_active ? 'Engine Active' : 'Engine Inactive'}
                 </span>
               </div>
               
@@ -723,7 +540,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
               </div>
             )}
 
-<<<<<<< HEAD
             {/* POOL PROGRESS TREE VIEW - MLM INSPIRED STYLE */}
             {user.is_qualified && activePool && (
               <div className={`glass rounded-[2.5rem] p-6 relative overflow-hidden transition-all duration-300 ${
@@ -800,72 +616,27 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                       const isFilled = i < activePool.members_count;
                       return (
                         <div key={i} className="flex flex-col items-center gap-2 group/slot">
-                          <div className={`w-10 h-10 rounded-2xl border-2 rotate-45 flex items-center justify-center transition-all duration-700 ${
+                          <div className={`w-12 h-12 rounded-full p-[2px] transition-all duration-700 ${
                             isFilled 
                               ? activePool.pool_number === 1 
-                                ? 'border-amber-500 bg-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.3)]' 
-                                : 'border-primary bg-primary/20 shadow-lg shadow-primary/20' 
-                              : 'border-white/5 bg-white/5 hover:border-white/20'
+                                ? 'bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 shadow-amber-500/30' 
+                                : 'bg-gradient-to-br from-primary to-secondary shadow-primary/20' 
+                              : 'bg-white/5 border border-white/10'
                           }`}>
-                            <div className="-rotate-45">
+                            <div className="w-full h-full bg-darker rounded-full flex items-center justify-center overflow-hidden relative">
                               {isFilled ? (
-                                <div className={`w-5 h-5 rounded-full flex items-center justify-center ${activePool.pool_number === 1 ? 'bg-amber-500' : 'bg-primary'}`}>
-                                  <span className="text-darker text-[10px] font-black">✓</span>
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${activePool.pool_number === 1 ? 'bg-amber-500' : 'bg-primary'}`}>
+                                  <Check size={12} className="text-darker" strokeWidth={4} />
                                 </div>
                               ) : (
-                                <div className="w-4 h-4 rounded-full border border-white/10 flex items-center justify-center">
-                                  <div className="w-1 h-1 rounded-full bg-white/5"></div>
+                                <div className="w-5 h-5 rounded-full border border-white/5 flex items-center justify-center">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-white/5"></div>
                                 </div>
                               )}
                             </div>
                           </div>
                           <span className={`text-[7px] font-black uppercase tracking-widest mt-1 ${isFilled ? activePool.pool_number === 1 ? 'text-amber-500' : 'text-primary' : 'text-slate-700'}`}>
                             Lvl {i + 1}
-=======
-            {/* POOL PROGRESS TREE VIEW */}
-            {user.is_qualified && activePool && (
-              <div className="glass rounded-[2.5rem] p-6 border-primary/20 bg-primary/5 relative overflow-hidden">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h3 className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">Pool {activePool.pool_number} Voyager</h3>
-                    <p className="text-slate-500 text-[8px] font-bold uppercase tracking-widest mt-1">Global FIFO Matrix</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                      {activePool.members_count} / {activePool.pool_number === 1 ? 4 : 6}
-                    </span>
-                    <p className="text-[8px] text-primary font-black uppercase tracking-widest">Members Filled</p>
-                  </div>
-                </div>
-
-                {/* Visual Tree/Slots */}
-                <div className="flex flex-col items-center gap-6 py-4">
-                  {/* User Node */}
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary p-[2px] shadow-lg shadow-primary/20">
-                      <div className="w-full h-full bg-darker rounded-full flex items-center justify-center font-black text-xs text-primary italic">
-                        YOU
-                      </div>
-                    </div>
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-[2px] h-6 bg-gradient-to-b from-primary/50 to-transparent"></div>
-                  </div>
-
-                  {/* Member Slots */}
-                  <div className="flex flex-wrap justify-center gap-4 mt-2">
-                    {Array.from({ length: activePool.pool_number === 1 ? 4 : 6 }).map((_, i) => {
-                      const isFilled = i < activePool.members_count;
-                      return (
-                        <div key={i} className="flex flex-col items-center gap-2">
-                          <div className={`w-8 h-8 rounded-full border-2 transition-all duration-500 ${isFilled ? 'border-primary bg-primary/20 shadow-lg shadow-primary/20' : 'border-white/5 bg-white/5'}`}>
-                            {isFilled && (
-                              <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-primary">
-                                ✓
-                              </div>
-                            )}
-                          </div>
-                          <span className={`text-[8px] font-black uppercase tracking-widest ${isFilled ? 'text-primary' : 'text-slate-700'}`}>
-                            Slot {i + 1}
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                           </span>
                         </div>
                       );
@@ -873,7 +644,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                   </div>
                 </div>
 
-<<<<<<< HEAD
                 {/* BOTTOM REWARD SECTION - MLM STYLE */}
                 <div className={`mt-8 pt-6 border-t relative z-10 ${activePool.pool_number === 1 ? 'border-amber-500/20' : 'border-white/5'}`}>
                   <div className="flex justify-between items-center">
@@ -897,21 +667,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, wallet, pools = [], onNavig
                       }`}
                     >
                       Matrix View
-=======
-                <div className="mt-6 pt-6 border-t border-white/5">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-[8px] text-slate-500 uppercase font-black">Completion Reward</p>
-                      <p className="text-lg font-black text-white">
-                        {activePool.pool_number === 1 ? '$10 + Rebirth' : `$${(Math.pow(2, activePool.pool_number - 1) * 10 * 6 * 0.5).toFixed(0)} + Upgrade`}
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => onNavigate?.('pools')}
-                      className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
-                    >
-                      View All Pools →
->>>>>>> 8beb4707fdef8229e57f4f93ef58ee40002f92a2
                     </button>
                   </div>
                 </div>
